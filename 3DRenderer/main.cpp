@@ -8,7 +8,7 @@
 #include "immintrin.h"
 
 
-//kappa
+//c41
 
 
 int main()
