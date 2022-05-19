@@ -252,6 +252,8 @@ int main()
 				float a2 = (proj_verts[1].y - proj_verts[0].y), b2 = (proj_verts[0].x - proj_verts[1].x);
 
 				triangle.area = func::edge_f(sf::Vector2f(proj_verts[0].x, proj_verts[0].y), proj_verts[1], proj_verts[2]);
+
+				/*
 				float w0r = func::edge_f(pixel, proj_verts[1], proj_verts[2]);
 				float w1r = func::edge_f(pixel, proj_verts[2], proj_verts[0]);
 				float w2r = func::edge_f(pixel, proj_verts[0], proj_verts[1]);
@@ -295,6 +297,121 @@ int main()
 					w1r += b1;
 					w2r += b2;
 				}
+				*/
+				/**/
+				__m256 factor = _mm256_set_ps(7, 6, 5, 4, 3, 2, 1, 0);
+				__m256 A0s = _mm256_mul_ps(_mm256_set_ps(a0, a0, a0, a0, a0, a0, a0, a0), factor);
+				__m256 A1s = _mm256_mul_ps(_mm256_set_ps(a1, a1, a1, a1, a1, a1, a1, a1), factor);
+				__m256 A2s = _mm256_mul_ps(_mm256_set_ps(a2, a2, a2, a2, a2, a2, a2, a2), factor);
+				float inc = a0 * 8;
+				float inc2 = a1 * 8;
+				float inc3 = a2 * 8;
+				
+
+				float w0r = func::edge_f(pixel, proj_verts[1], proj_verts[2]);
+				float w1r = func::edge_f(pixel, proj_verts[2], proj_verts[0]);
+				float w2r = func::edge_f(pixel, proj_verts[0], proj_verts[1]);
+
+				for (int i = triangle.b_top; i < triangle.b_bot; i += 1)
+				{
+					__m256 w0 = _mm256_add_ps(A0s, _mm256_set_ps(w0r, w0r, w0r, w0r, w0r, w0r, w0r, w0r));
+					__m256 w1 = _mm256_add_ps(A1s, _mm256_set_ps(w1r, w1r, w1r, w1r, w1r, w1r, w1r, w1r));
+					__m256 w2 = _mm256_add_ps(A2s, _mm256_set_ps(w2r, w2r, w2r, w2r, w2r, w2r, w2r, w2r));
+
+					float* one = (float*)&w0;
+					float* two = (float*)&w1;
+					float* three = (float*)&w2;
+
+					for (int j = triangle.b_left; j < triangle.b_right; j += 8)
+					{					
+						for (int k = 0; k < 8 && k + j < triangle.b_right; ++k)
+						{
+							if ((one[k] >= 0 && two[k] >= 0 && three[k] >= 0) || (one[k] < 0 && two[k] < 0 && three[k] < 0))
+							{
+								float b0t = one[k] / (triangle.area);
+								float b1t = two[k] / (triangle.area);
+								float b2t = three[k] / (triangle.area);
+
+								float z = b0t * proj_verts[0].z +
+									b1t * proj_verts[1].z +
+									b2t * proj_verts[2].z;
+
+								float inv_z = 1 / z;
+								if (inv_z < z_buffer[k + j][i])
+								{
+									z_buffer[j + k][i] = inv_z;
+
+									int index = ((j + k) + i * 1000) * 4;
+									buffer[index] = b0t * 255;
+									buffer[index + 1] = b1t * 255;
+									buffer[index + 2] = b2t * 255;
+									buffer[index + 3] = 255;
+								}
+							}
+						}
+						w0 = _mm256_add_ps(w0, _mm256_set_ps(inc, inc, inc, inc, inc, inc, inc, inc));
+						w1 = _mm256_add_ps(w1, _mm256_set_ps(inc2, inc2, inc2, inc2, inc2, inc2, inc2, inc2));
+						w2 = _mm256_add_ps(w2, _mm256_set_ps(inc3, inc3, inc3, inc3, inc3, inc3, inc3, inc3));
+					}
+					w0r += b0;
+					w1r += b1;
+					w2r += b2;
+				}
+				
+
+				/*
+				float w0r = func::edge_f(pixel, proj_verts[1], proj_verts[2]);
+				float w1r = func::edge_f(pixel, proj_verts[2], proj_verts[0]);
+				float w2r = func::edge_f(pixel, proj_verts[0], proj_verts[1]);
+
+				for (int i = triangle.b_top; i < triangle.b_bot; i += 1)
+				{
+					float w0[8] = { w0r + (a0 * 0), w0r + (a0 * 1), w0r + (a0 * 2), w0r + (a0 * 3),
+									w0r + (a0 * 4) , w0r + (a0 * 5) ,w0r + (a0 * 6), w0r + (a0 * 7) };
+					float w1[8] = { w1r + (a1 * 0), w1r + (a1 * 1), w1r + (a1 * 2), w1r + (a1 * 3),
+									w1r + (a1 * 4) , w1r + (a1 * 5) ,w1r + (a1 * 6), w1r + (a1 * 7) };
+					float w2[8] = { w2r + (a2 * 0), w2r + (a2 * 1), w2r + (a2 * 2), w2r + (a2 * 3),
+									w2r + (a2 * 4) , w2r + (a2 * 5) ,w2r + (a2 * 6), w2r + (a2 * 7) };
+
+					for (int j = triangle.b_left; j < triangle.b_right; j += 8)
+					{
+						for (int k = 0; k < 8 && (j + k) < triangle.b_right; ++k)
+						{
+							if ((w0[k] >= 0 && w1[k] >= 0 && w2[k] >= 0) || (w0[k] < 0 && w1[k] < 0 && w2[k] < 0))
+							{
+								float b0t = w0[k] / (triangle.area);
+								float b1t = w1[k] / (triangle.area);
+								float b2t = w2[k] / (triangle.area);
+
+								float z = b0t * proj_verts[0].z +
+									b1t * proj_verts[1].z +
+									b2t * proj_verts[2].z;
+
+								float inv_z = 1 / z;
+								if (inv_z < z_buffer[k + j][i])
+								{
+									z_buffer[j + k][i] = inv_z;
+
+									int index = ((j + k) + i * 1000) * 4;
+									buffer[index] = b0t * 255;
+									buffer[index + 1] = b1t * 255;
+									buffer[index + 2] = b2t * 255;
+									buffer[index + 3] = 255;
+								}
+							}
+						}
+						for (int i = 0; i < 8; ++i)
+						{
+							w0[i] = w0[i] + (a0 * 8);
+							w1[i] = w1[i] + (a1 * 8);
+							w2[i] = w2[i] + (a2 * 8);
+						}
+					}
+					w0r += b0;
+					w1r += b1;
+					w2r += b2;
+				}*/
+								
 			}
 		}
 		//fps counter
