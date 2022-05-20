@@ -39,9 +39,9 @@ Rasterizer::Rasterizer(int _w_width, int _w_height, float _c_near, float _c_far,
 
 void Rasterizer::project_triangle(const sf::Vector3f(&tri_verts)[3], float mat[4][4], sf::Vector3f (&proj_verts)[3])
 {
-	func::mult4x4(tri_verts[0], mat, proj_verts[0]);
-	func::mult4x4(tri_verts[1], mat, proj_verts[1]);
-	func::mult4x4(tri_verts[2], mat, proj_verts[2]);
+	func::vecXmatrix(tri_verts[0], mat, proj_verts[0]);
+	func::vecXmatrix(tri_verts[1], mat, proj_verts[1]);
+	func::vecXmatrix(tri_verts[2], mat, proj_verts[2]);
 
 	for (int i = 0; i < 3; ++i)
 	{
@@ -60,9 +60,9 @@ void Rasterizer::rot_x(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[
 		{0.0, 0.0, 0.0, 1.0}
 	};
 
-	func::mult4x4(tri.verts[0], x_mat, trans_verts[0]);
-	func::mult4x4(tri.verts[1], x_mat, trans_verts[1]);
-	func::mult4x4(tri.verts[2], x_mat, trans_verts[2]);
+	func::vecXmatrix(tri.verts[0], x_mat, trans_verts[0]);
+	func::vecXmatrix(tri.verts[1], x_mat, trans_verts[1]);
+	func::vecXmatrix(tri.verts[2], x_mat, trans_verts[2]);
 
 	return;
 }
@@ -76,9 +76,9 @@ void Rasterizer::rot_y(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[
 		{0.0, 0.0, 0.0, 1.0}
 	};
 
-	func::mult4x4(tri.verts[0], y_mat, trans_verts[0]);
-	func::mult4x4(tri.verts[1], y_mat, trans_verts[1]);
-	func::mult4x4(tri.verts[2], y_mat, trans_verts[2]);
+	func::vecXmatrix(tri.verts[0], y_mat, trans_verts[0]);
+	func::vecXmatrix(tri.verts[1], y_mat, trans_verts[1]);
+	func::vecXmatrix(tri.verts[2], y_mat, trans_verts[2]);
 	return;
 }
 void Rasterizer::rot_z(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3])
@@ -90,9 +90,9 @@ void Rasterizer::rot_z(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[
 		{0.0, 0.0, 0.0, 1.0}
 	};
 
-	func::mult4x4(tri.verts[0], z_mat, trans_verts[0]);
-	func::mult4x4(tri.verts[1], z_mat, trans_verts[1]);
-	func::mult4x4(tri.verts[2], z_mat, trans_verts[2]);
+	func::vecXmatrix(tri.verts[0], z_mat, trans_verts[0]);
+	func::vecXmatrix(tri.verts[1], z_mat, trans_verts[1]);
+	func::vecXmatrix(tri.verts[2], z_mat, trans_verts[2]);
 
 	return;
 }
@@ -143,7 +143,7 @@ int Rasterizer::clip_triangle_near(sf::Vector3f(&proj_verts)[3], std::vector<Tri
 		//std::cout << "2x new tri\n";
 		sf::Vector3f one = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[0], clipped_vertices[0]);
 		sf::Vector3f two = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[1], clipped_vertices[0]);
-		out.push_back(Triangle(one, two, safe_vertices[1]));
+		out.push_back(Triangle(two, one, safe_vertices[1]));
 		out.push_back(Triangle(one, safe_vertices[0], safe_vertices[1]));
 		return 2;
 	}

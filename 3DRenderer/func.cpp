@@ -6,6 +6,7 @@ float y_rot(float mat[4][4]);
 
 sf::Vector3f func::getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_normal, sf::Vector3f p0, sf::Vector3f p1)
 {
+	plane_normal = func::norm3f(plane_normal);
 	float dist = -func::dotpro(plane_point, plane_normal);
 	float ad = func::dotpro(p0, plane_normal);
 	float bd = func::dotpro(p1, plane_normal);
@@ -24,7 +25,7 @@ sf::Vector3f operator- (const sf::Vector3f& l, const sf::Vector3f& r)
 	return sf::Vector3f(l.x - r.x, l.y - r.y, l.z - r.z);
 }
 
-void func::mult4x4(const sf::Vector3f vec, const float matrix[4][4], sf::Vector3f& result)
+void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vector3f& result)
 {
 	result.x = vec.x * matrix[0][0] + vec.y * matrix[1][0] + vec.z * matrix[2][0] + matrix[3][0];
 	result.y = vec.x * matrix[0][1] + vec.y * matrix[1][1] + vec.z * matrix[2][1] + matrix[3][1];
@@ -58,7 +59,7 @@ float func::edge_f(const sf::Vector2f& pixel, const sf::Vector3f& v0, const sf::
 	return temp;
 }
 
-void func::vec_mult (const float left_mat[4][4], const float right_mat[4][4], float (&res)[4][4])
+void func::matrixXmatrix (const float left_mat[4][4], const float right_mat[4][4], float (&res)[4][4])
 {
 	for (uint8_t i = 0; i < 4; ++i) {
 		for (uint8_t j = 0; j < 4; ++j) {
@@ -89,6 +90,11 @@ sf::Vector3f func::crossv(const sf::Vector3f l, const sf::Vector3f r)
 float func::dotpro(const sf::Vector3f l, const sf::Vector3f r)
 {
 	return (l.x * r.x) + (l.y * r.y) + (l.z * r.z);
+}
+
+sf::Vector3f func::vecXScalar(const sf::Vector3f l, float r)
+{
+	return sf::Vector3f(l.x * r, l.y * r, l.z * r);
 }
 
 void func::print(const sf::Vector3f& i)
