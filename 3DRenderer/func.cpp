@@ -1,8 +1,5 @@
 #include "func.hpp"
-
-float z_rot(float mat[4][4]);
-float x_rot(float mat[4][4]);
-float y_rot(float mat[4][4]);
+#include <iomanip>
 
 sf::Vector3f func::getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_normal, sf::Vector3f p0, sf::Vector3f p1)
 {
@@ -16,13 +13,6 @@ sf::Vector3f func::getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_
 	lineIntersect.x = line.x * t; lineIntersect.y = line.y * t; lineIntersect.z = line.z * t;
 	return (p0 + lineIntersect);
 
-}
-
-
-
-sf::Vector3f operator- (const sf::Vector3f& l, const sf::Vector3f& r)
-{
-	return sf::Vector3f(l.x - r.x, l.y - r.y, l.z - r.z);
 }
 
 void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vector3f& result)
@@ -99,5 +89,6 @@ sf::Vector3f func::vecXScalar(const sf::Vector3f l, float r)
 
 void func::print(const sf::Vector3f& i)
 {
-	std::cout << "x: " << i.x << " y: " << i.y << " z: " << i.z << std::endl;
+	
+	std::cout << std::setprecision(50) << "x: " << i.x << " y: " << i.y << " z: " << i.z << std::endl;
 }

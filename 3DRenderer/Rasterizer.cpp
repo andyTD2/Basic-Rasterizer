@@ -97,14 +97,10 @@ void Rasterizer::rot_z(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[
 	return;
 }
 
-int Rasterizer::clip_triangle_near(sf::Vector3f(&proj_verts)[3], std::vector<Triangle>& out)
+int Rasterizer::clip_triangle_near(sf::Vector3f(&proj_verts)[3], std::vector<Triangle>& out, bool debug, std::vector<Triangle>& events)
 {
 	std::vector<sf::Vector3f> clipped_vertices;
 	std::vector<sf::Vector3f> safe_vertices;
-	//std::cout << "CLIPPING\n";
-	//func::print(proj_verts[0]);
-	//func::print(proj_verts[1]);
-	//func::print(proj_verts[2]);
 
 
 	for (int i = 0; i < 3; ++i)
@@ -120,7 +116,6 @@ int Rasterizer::clip_triangle_near(sf::Vector3f(&proj_verts)[3], std::vector<Tri
 		return 0;
 	}
 
-	///VVVVVVVVVV EXCEPTION BEING CAUSED HERE
 	// no vertex has crossed the near plane, do nothing
 	if (clipped_vertices.size() == 0)
 	{
@@ -131,20 +126,53 @@ int Rasterizer::clip_triangle_near(sf::Vector3f(&proj_verts)[3], std::vector<Tri
 	// only need to create one new triangle
 	else if (clipped_vertices.size() == 2)
 	{
-		//std::cout << "new tri\n";
+		if (debug)
+		{
+			bool in = false;
+			for (auto& tri : events)
+			{
+				if (tri.verts[0].x == proj_verts[0].x && tri.verts[0].y == proj_verts[0].y && tri.verts[0].z == proj_verts[0].z)
+				{
+					if (tri.verts[1].x == proj_verts[1].x && tri.verts[1].y == proj_verts[1].y && tri.verts[1].z == proj_verts[1].z)
+					{
+						if (tri.verts[2].x == proj_verts[2].x && tri.verts[2].y == proj_verts[2].y && tri.verts[2].z == proj_verts[2].z)
+							in = true;
+					}
+				}
+			}
+			if (!in)
+				events.push_back(Triangle(proj_verts[0], proj_verts[1], proj_verts[2]));
+		}
 		sf::Vector3f one = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[0], clipped_vertices[0]);
 		sf::Vector3f two = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[0], clipped_vertices[1]);
+		
+		one.z = c_near;
+		two.z = c_near;
 		out.push_back(Triangle(one, two, safe_vertices[0]));
 		return 1;
 	}
 
 	else if (clipped_vertices.size() == 1)
 	{
+		//std::cout << "CLIPPING\n";
+		//func::print(proj_verts[0]);
+		//func::print(proj_verts[1]);
+		//func::print(proj_verts[2]);
+
 		//std::cout << "2x new tri\n";
 		sf::Vector3f one = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[0], clipped_vertices[0]);
 		sf::Vector3f two = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[1], clipped_vertices[0]);
-		out.push_back(Triangle(two, one, safe_vertices[1]));
+		out.push_back(Triangle(one, two, safe_vertices[1]));
 		out.push_back(Triangle(one, safe_vertices[0], safe_vertices[1]));
+
+		//std::cout << "AFTER CLIPPING\nTRIANGLE ONE\n";
+		//func::print(one);
+		//func::print(two);
+		//func::print(safe_vertices[1]);
+		//std::cout << "TRIANGLE TWO\n";
+		//func::print(one);
+		//func::print(safe_vertices[0]);
+		//func::print(safe_vertices[1]);
 		return 2;
 	}
 	return 0;

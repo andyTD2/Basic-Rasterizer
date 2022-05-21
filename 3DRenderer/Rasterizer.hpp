@@ -26,5 +26,5 @@ public:
 	void rot_x(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3]);
 	void rot_y(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3]);
 	void rot_z(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3]);
-	int clip_triangle_near(sf::Vector3f(&proj_verts)[3], std::vector<Triangle>& out);
+	int clip_triangle_near(sf::Vector3f(&proj_verts)[3], std::vector<Triangle>& out, bool debug, std::vector<Triangle>& events);
 };

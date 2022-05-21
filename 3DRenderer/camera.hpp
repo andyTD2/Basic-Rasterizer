@@ -12,10 +12,9 @@ public:
 	void setPanSpeed(float newSpeed);
 
 	float camMatrix[4][4];
-
+	sf::Vector3f camPos;
 
 private:
-	sf::Vector3f camPos;
 	sf::Vector3f lookDir;
 	sf::Vector3f velocity;
 	float curXRotation;

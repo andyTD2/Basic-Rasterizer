@@ -3,14 +3,8 @@
 #include "math.h"
 #include <iostream>
 
-sf::Vector3f operator- (const sf::Vector3f& l, const sf::Vector3f& r);
-
 
 namespace func {
-	float z_rot(float mat[4][4]);
-	float x_rot(float mat[4][4]);
-	float y_rot(float mat[4][4]);
-
 	sf::Vector3f getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_normal, sf::Vector3f p0, sf::Vector3f p1);
 
 	void vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vector3f& result);

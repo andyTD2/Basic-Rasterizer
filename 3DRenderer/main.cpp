@@ -29,43 +29,77 @@ int main()
 
 	std::vector<sf::Vector3f> vertices;
 	vertices.push_back(sf::Vector3f(0, 0, 0));
-	std::ifstream file("teapot.txt");
+	
+	
+	std::ifstream file("teapot.obj");
 	std::string line;
 	while (!std::getline(file, line).eof())
 	{
+		std::string firstToken;
 		std::istringstream iss(line);
-		float one, two, three;
-		std::string toss;
-		iss >> toss >> one >> two >> three;
-		if (toss == "v")
+		iss >> firstToken;
+		if (firstToken == "v")
 		{
-			vertices.push_back(sf::Vector3f(one, two, three));
+			float vx, vy, vz;
+			iss >> vx >> vy >> vz;
+			vertices.push_back(sf::Vector3f(vx, vy, vz));
 		}
-		else if (toss == "f")
+		else if (firstToken == "f")
 		{
-			rasterizer.triangles.push_back(Triangle(vertices[one], vertices[two], vertices[three]));
+			int v0, v1, v2;
+
+			iss >> v0;
+			if (iss.peek() == '/')
+				iss.ignore(line.size(), ' ');
+
+			iss >> v1;
+			if (iss.peek() == '/')
+				iss.ignore(line.size(), ' ');
+
+			iss >> v2;
+
+			rasterizer.triangles.push_back(Triangle(vertices[v0], vertices[v1], vertices[v2]));
 		}
 	}
+	
+
+	/*
+	std::ifstream bug("vertices.txt");
+	std::string line;
+	while (!std::getline(bug, line).eof())
+	{
+		float a1, a2, a3, a4, a5, a6, a7, a8, a9;
+		std::istringstream iss(line);
+		iss >> a1 >> a2 >> a3 >> a4 >> a5 >> a6 >> a7 >> a8 >> a9;
+		rasterizer.triangles.push_back(Triangle(sf::Vector3f(a1, a2, a3), sf::Vector3f(a4, a5, a6), sf::Vector3f(a7, a8, a9)));
+	}*/
+
+	//rasterizer.triangles.push_back(Triangle(sf::Vector3f(-58.782, -1272.52, 1732.23), sf::Vector3f(-2027.69, 1506.66, -158.596), sf::Vector3f(-2024.1, 240.646, -888.647)));
+	//rasterizer.triangles.push_back(Triangle(sf::Vector3f(-1529.31, 193.66, -786.337), sf::Vector3f(42.0102, 185.039, 2002.63), sf::Vector3f(-1529.31, 1394.85, -92.8294)));
 
 
 	bool camera_rotating_right = false, camera_rotating_left = false, camera_rotating_up = false, camera_rotating_down = false;
 	bool camera_pan_forward = false, camera_pan_backwards = false, camera_pan_left = false, camera_pan_right = false;
 	Camera cam;
+	//cam.setPanSpeed(5);
+	//cam.setRotationSpeed(1);
 
 	int bufferSize = rasterizer.w_width * rasterizer.w_height * 4;
+
+	std::vector<Triangle> events;
 
 	while (window.isOpen())
 	{
 
 		//DECLARE/RESET our buffers
-		std::vector<std::vector<float>> z_buffer((float)rasterizer.w_width, std::vector<float>(rasterizer.w_height, 0));
+		std::vector<std::vector<float>> z_buffer((float)rasterizer.w_width, std::vector<float>(rasterizer.w_height, INT_MAX));
 		sf::Uint8* buffer = new sf::Uint8[bufferSize];
 		for (int i = 0; i < bufferSize; i++)
 		{
 			buffer[i] = 0;
 		}
 
-
+		bool debug = false;
 		//Handle keyboard input
 		sf::Event event;
 		while (window.pollEvent(event))
@@ -83,6 +117,19 @@ int main()
 				if (event.key.code == sf::Keyboard::S) camera_pan_backwards = true;
 				if (event.key.code == sf::Keyboard::A) camera_pan_left = true;
 				if (event.key.code == sf::Keyboard::D) camera_pan_right = true;
+				if (event.key.code == sf::Keyboard::F) debug = true;
+				if (event.key.code == sf::Keyboard::G) debug = false;
+				if (event.key.code == sf::Keyboard::B)
+				{
+					std::ofstream out("vertices.txt");
+					for (auto& tri : events)
+					{
+						out << tri.verts[0].x << " " << tri.verts[0].y << " " << tri.verts[0].z << " ";
+						out << " " << tri.verts[1].x << " " << tri.verts[1].y << " " << tri.verts[1].z << " ";
+						out << " " << tri.verts[2].x << " " << tri.verts[2].y << " " << tri.verts[2].z << "\n";
+					}
+					out.close();
+				}
 			}
 			if (event.type == sf::Event::KeyReleased)
 			{
@@ -112,14 +159,24 @@ int main()
 			func::vecXmatrix(triangle.verts[1], cam.camMatrix, view_verts[1]);
 			func::vecXmatrix(triangle.verts[2], cam.camMatrix, view_verts[2]);
 
-			rasterizer.clip_triangle_near(view_verts, preparedTriangles);
+			rasterizer.clip_triangle_near(view_verts, preparedTriangles, debug, events);
 		}
 
 		int numTrisBeingDrawn = 0;
 		for (auto& triangle : preparedTriangles)
 		{
 			sf::Vector3f proj_verts[3];
+			//std::cout << "BEFORE PROJ: " << triangle.verts[0].z << ", " << triangle.verts[1].z << ", " << triangle.verts[2].z << std::endl;
 			rasterizer.project_triangle(triangle.verts, rasterizer.p_mat, proj_verts);
+			//std::cout << "AFTER PROJ: " << std::setprecision(10) << proj_verts[0].z << ", " << proj_verts[1].z << ", " << proj_verts[2].z << std::endl;
+			//std::cout << "tri\n";
+			//func::print(proj_verts[0]);
+			//func::print(proj_verts[1]);
+			//func::print(proj_verts[2]);
+
+			float va = 1 / triangle.verts[0].z;
+			float vb = 1 / triangle.verts[1].z;
+			float vc = 1 / triangle.verts[2].z;
 
 			triangle.b_left =	std::min({ proj_verts[0].x, proj_verts[1].x, proj_verts[2].x });
 			triangle.b_top =	std::min({ proj_verts[0].y, proj_verts[1].y, proj_verts[2].y });
@@ -134,8 +191,8 @@ int main()
 				triangle.b_right =	std::min(rasterizer.w_width - 1, std::max(triangle.b_right, 0));
 				triangle.b_bot =	std::min(rasterizer.w_height - 1, std::max(triangle.b_bot, 0));
 				
-				float bb_area = (triangle.b_bot - triangle.b_top) * (triangle.b_right - triangle.b_left);
 
+				
 				float a0 = (proj_verts[2].y - proj_verts[1].y), b0 = (proj_verts[1].x - proj_verts[2].x);
 				float a1 = (proj_verts[0].y - proj_verts[2].y), b1 = (proj_verts[2].x - proj_verts[0].x);
 				float a2 = (proj_verts[1].y - proj_verts[0].y), b2 = (proj_verts[0].x - proj_verts[1].x);
@@ -177,13 +234,17 @@ int main()
 								float b1t = two[k] / (triangle.area);
 								float b2t = three[k] / (triangle.area);
 
-								float z = b0t * proj_verts[0].z +
-									b1t * proj_verts[1].z +
-									b2t * proj_verts[2].z;
+								float z = b0t * va +
+									b1t * vb +
+									b2t * vc;
+
+								//float z = b0t * triangle.verts[0].z +
+								//	b1t * triangle.verts[1].z +
+								//	b2t * triangle.verts[2].z;
 
 								float inv_z = 1 / z;
 								int index = k + j;
-								if (inv_z > z_buffer[index][i])
+								if (inv_z < z_buffer[index][i])
 								{
 									z_buffer[index][i] = inv_z;
 
@@ -203,6 +264,7 @@ int main()
 					w1r += b1;
 					w2r += b2;
 				}
+				
 								
 			}
 		}
@@ -219,7 +281,6 @@ int main()
 		numTrisText.setFillColor(sf::Color::Cyan);
 
 		window.clear();
-
 		sf::Image image;
 		image.create(rasterizer.w_width, rasterizer.w_height, buffer);
 		delete[] buffer;
