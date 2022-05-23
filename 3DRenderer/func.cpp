@@ -28,8 +28,33 @@ void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vect
 		result.y /= w;
 		result.z /= w;
 	}
-	//std::cout << "RES: ";
-	//print(result);
+	
+	/*
+	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y), 
+							   _mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
+
+	__m128 multiplyZs = _mm_mul_ps(_mm_setr_ps(vec.z, vec.z, vec.z, vec.z), _mm_setr_ps(matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]));
+
+	__m256 snd = _mm256_castps128_ps256(multiplyZs);
+	snd = _mm256_insertf128_ps(snd, _mm_setr_ps(matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]), 1);
+	__m256 add = _mm256_add_ps(multiplyXandYs, snd);
+
+	__m128 sum = _mm_add_ps(_mm256_extractf128_ps(add, 0), _mm256_extractf128_ps(add, 1));
+	float* sumArray = (float*)&sum;
+	result.x = sumArray[0];
+	result.y = sumArray[1];
+	result.z = sumArray[2];
+	float w = sumArray[3];
+	if (w != 1)
+	{
+		result.x /= w;
+		result.y /= w;
+		result.z /= w;
+	}
+	*/
+
+	
+
 }
 
 float func::edge_f(const sf::Vector2f& pixel, const sf::Vector3f& v0, const sf::Vector3f& v1)
