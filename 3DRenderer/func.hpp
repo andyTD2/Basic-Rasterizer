@@ -2,7 +2,7 @@
 #include "SFML/Graphics.hpp"
 #include "math.h"
 #include <iostream>
-
+#include "immintrin.h"
 
 namespace func {
 	sf::Vector3f getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_normal, sf::Vector3f p0, sf::Vector3f p1);
@@ -20,19 +20,24 @@ namespace func {
 	void print(const sf::Vector3f& i);
 }
 
+template <typename T>
+struct node
+{
+	T data;
+	struct node<T>* next;
+	node<T>()
+	{
+	};
 
+};
 
 struct Triangle
 {
 	sf::Vector3f verts[3];
-	double area;
+	Triangle()
+	{
 
-	//bounding box
-	int b_left;
-	int b_top;
-	int b_right;
-	int b_bot;
-
+	}
 	Triangle(sf::Vector3f v0, sf::Vector3f v1, sf::Vector3f v2)
 	{
 		verts[0] = v0; verts[1] = v1; verts[2] = v2;

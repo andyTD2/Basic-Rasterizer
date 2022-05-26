@@ -17,7 +17,7 @@ sf::Vector3f func::getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_
 
 void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vector3f& result)
 {
-	result.x = vec.x * matrix[0][0] + vec.y * matrix[1][0] + vec.z * matrix[2][0] + matrix[3][0];
+	/*result.x = vec.x * matrix[0][0] + vec.y * matrix[1][0] + vec.z * matrix[2][0] + matrix[3][0];
 	result.y = vec.x * matrix[0][1] + vec.y * matrix[1][1] + vec.z * matrix[2][1] + matrix[3][1];
 	result.z = vec.x * matrix[0][2] + vec.y * matrix[1][2] + vec.z * matrix[2][2] + matrix[3][2];
 	float w = vec.x * matrix[0][3] + vec.y * matrix[1][3] + vec.z * matrix[2][3] + matrix[3][3];
@@ -28,8 +28,8 @@ void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vect
 		result.y /= w;
 		result.z /= w;
 	}
+	*/
 	
-	/*
 	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y), 
 							   _mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
 
@@ -51,7 +51,7 @@ void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vect
 		result.y /= w;
 		result.z /= w;
 	}
-	*/
+	
 
 	
 
