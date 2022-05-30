@@ -76,6 +76,7 @@ void Rasterizer::rot_y(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[
 		{0.0, 0.0, 0.0, 1.0}
 	};
 
+
 	func::vecXmatrix(tri.verts[0], y_mat, trans_verts[0]);
 	func::vecXmatrix(tri.verts[1], y_mat, trans_verts[1]);
 	func::vecXmatrix(tri.verts[2], y_mat, trans_verts[2]);
@@ -90,6 +91,7 @@ void Rasterizer::rot_z(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[
 		{0.0, 0.0, 0.0, 1.0}
 	};
 
+
 	func::vecXmatrix(tri.verts[0], z_mat, trans_verts[0]);
 	func::vecXmatrix(tri.verts[1], z_mat, trans_verts[1]);
 	func::vecXmatrix(tri.verts[2], z_mat, trans_verts[2]);
@@ -97,12 +99,12 @@ void Rasterizer::rot_z(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[
 	return;
 }
 
-int Rasterizer::clip_triangle_near(sf::Vector3f(&proj_verts)[3], std::vector<Triangle>& out)
+int Rasterizer::clip_triangle_near(const Triangle& tri, sf::Vector3f(&proj_verts)[3], std::vector<Triangle>& out)
 {
 	//early outs
 	if (proj_verts[0].z > c_near && proj_verts[1].z > c_near && proj_verts[2].z > c_near)
 	{
-		out.push_back(Triangle(proj_verts[0], proj_verts[1], proj_verts[2]));
+		out.push_back(Triangle(proj_verts[0], proj_verts[1], proj_verts[2], tri.tCoords[0], tri.tCoords[1], tri.tCoords[2]));
 		return 1;
 	}
 	else if (proj_verts[0].z < c_near && proj_verts[1].z < c_near && proj_verts[2].z < c_near)
@@ -110,35 +112,60 @@ int Rasterizer::clip_triangle_near(sf::Vector3f(&proj_verts)[3], std::vector<Tri
 		return 0;
 	}
 
-	std::vector<sf::Vector3f> clipped_vertices;
-	std::vector<sf::Vector3f> safe_vertices;
-
+	std::vector<sf::Vector3f> clippedVertices;
+	std::vector<sf::Vector3f> safeVertices;
+	std::vector<sf::Vector2f> clippedTVertices;
+	std::vector<sf::Vector2f> safeTVertices;
 
 	for (int i = 0; i < 3; ++i)
 	{
 		if (proj_verts[i].z < c_near)
-			clipped_vertices.push_back(proj_verts[i]);
-		else safe_vertices.push_back(proj_verts[i]);
+		{
+			clippedVertices.push_back(proj_verts[i]);
+			clippedTVertices.push_back(tri.tCoords[i]);
+		}
+		else
+		{
+			safeVertices.push_back(proj_verts[i]);
+			safeTVertices.push_back(tri.tCoords[i]);
+		}
 	}
 
 	// only need to create one new triangle
-	if (clipped_vertices.size() == 2)
+	if (clippedVertices.size() == 2)
 	{
-		sf::Vector3f one = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[0], clipped_vertices[0]);
-		sf::Vector3f two = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[0], clipped_vertices[1]);
+		float t;
+		sf::Vector3f one = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safeVertices[0], clippedVertices[0], t);
+		sf::Vector2f newT1;
+		newT1.x = safeTVertices[0].x + (t * (clippedTVertices[0].x - safeTVertices[0].x));
+		newT1.y = safeTVertices[0].y + (t * (clippedTVertices[0].y - safeTVertices[0].y));
+
+		sf::Vector3f two = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safeVertices[0], clippedVertices[1], t);
+		sf::Vector2f newT2;
+		newT2.x = safeTVertices[0].x + (t * (clippedTVertices[1].x - safeTVertices[0].x));
+		newT2.y = safeTVertices[0].y + (t * (clippedTVertices[1].y - safeTVertices[0].y));
 		
 		one.z = c_near;
 		two.z = c_near;
-		out.push_back(Triangle(one, two, safe_vertices[0]));
+		out.push_back(Triangle(one, two, safeVertices[0], newT1, newT2, safeTVertices[0]));
 		return 1;
 	}
 
-	else if (clipped_vertices.size() == 1)
+	else if (clippedVertices.size() == 1)
 	{
-		sf::Vector3f one = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[0], clipped_vertices[0]);
-		sf::Vector3f two = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safe_vertices[1], clipped_vertices[0]);
-		out.push_back(Triangle(one, two, safe_vertices[1]));
-		out.push_back(Triangle(one, safe_vertices[0], safe_vertices[1]));
+		float t;
+		sf::Vector3f one = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safeVertices[0], clippedVertices[0], t);
+		sf::Vector2f newT1;
+		newT1.x = safeTVertices[0].x + (t * (clippedTVertices[0].x - safeTVertices[0].x));
+		newT1.y = safeTVertices[0].y + (t * (clippedTVertices[0].y - safeTVertices[0].y));
+
+		sf::Vector3f two = func::getIntersection(sf::Vector3f(0, 0, c_near), sf::Vector3f(0, 0, 1), safeVertices[1], clippedVertices[0], t);
+		sf::Vector2f newT2;
+		newT2.x = safeTVertices[1].x + (t * (clippedTVertices[0].x - safeTVertices[1].x));
+		newT2.y = safeTVertices[1].y + (t * (clippedTVertices[0].y - safeTVertices[1].y));
+
+		out.push_back(Triangle(one, two, safeVertices[1], newT1, newT2, safeTVertices[1]));
+		out.push_back(Triangle(one, safeVertices[0], safeVertices[1], newT1, safeTVertices[0], safeTVertices[1]));
 
 		return 2;
 	}

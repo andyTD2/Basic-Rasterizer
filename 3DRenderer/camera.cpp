@@ -12,7 +12,7 @@ Camera::Camera()
 void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool rotateDown, 
 							bool panForward, bool panBackwards, bool panLeft, bool panRight)
 {
-	velocity = func::vecXScalar(lookDir, panSpeed);
+	velocity = func::vec3XScalar(lookDir, panSpeed);
 
 	if (panForward)
 		camPos += velocity;
@@ -33,14 +33,14 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 	if (panLeft)
 	{
 		sf::Vector3f moveLeft = func::norm3f(func::crossv(velocity, sf::Vector3f(0, 1, 0)));
-		moveLeft = func::vecXScalar(moveLeft, panSpeed);
+		moveLeft = func::vec3XScalar(moveLeft, panSpeed);
 		camPos += moveLeft;
 	}
 
 	if (panRight)
 	{
 		sf::Vector3f moveRight = func::norm3f(func::crossv(velocity, sf::Vector3f(0, 1, 0)));
-		moveRight = func::vecXScalar(moveRight, panSpeed);
+		moveRight = func::vec3XScalar(moveRight, panSpeed);
 		camPos -= moveRight;
 	}
 

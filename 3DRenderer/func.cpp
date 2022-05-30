@@ -1,13 +1,13 @@
 #include "func.hpp"
 #include <iomanip>
 
-sf::Vector3f func::getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_normal, sf::Vector3f p0, sf::Vector3f p1)
+sf::Vector3f func::getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_normal, sf::Vector3f p0, sf::Vector3f p1, float& t)
 {
 	plane_normal = func::norm3f(plane_normal);
 	float dist = -func::dotpro(plane_point, plane_normal);
 	float ad = func::dotpro(p0, plane_normal);
 	float bd = func::dotpro(p1, plane_normal);
-	float t = (-dist - ad) / (bd - ad);
+	t = (-dist - ad) / (bd - ad);
 	sf::Vector3f line = p1 - p0;
 	sf::Vector3f lineIntersect;
 	lineIntersect.x = line.x * t; lineIntersect.y = line.y * t; lineIntersect.z = line.z * t;
@@ -29,7 +29,6 @@ void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vect
 		result.z /= w;
 	}
 	*/
-	
 	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y), 
 							   _mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
 
@@ -51,6 +50,7 @@ void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vect
 		result.y /= w;
 		result.z /= w;
 	}
+	
 	
 
 	
@@ -107,9 +107,14 @@ float func::dotpro(const sf::Vector3f l, const sf::Vector3f r)
 	return (l.x * r.x) + (l.y * r.y) + (l.z * r.z);
 }
 
-sf::Vector3f func::vecXScalar(const sf::Vector3f l, float r)
+sf::Vector3f func::vec3XScalar(const sf::Vector3f l, float r)
 {
 	return sf::Vector3f(l.x * r, l.y * r, l.z * r);
+}
+
+sf::Vector2f func::vec2XScalar(const sf::Vector2f l, float r)
+{
+	return sf::Vector2f(l.x * r, l.y * r);
 }
 
 void func::print(const sf::Vector3f& i)
