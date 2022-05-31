@@ -20,30 +20,3 @@ namespace func {
 	sf::Vector2f vec2XScalar(const sf::Vector2f l, float r);
 	void print(const sf::Vector3f& i);
 }
-
-template <typename T>
-struct node
-{
-	T data;
-	struct node<T>* next;
-	node<T>()
-	{
-	};
-
-};
-
-struct Triangle
-{
-	sf::Vector3f verts[3];
-	sf::Vector2f tCoords[3];
-	Triangle()
-	{
-
-	}
-	Triangle(sf::Vector3f v0, sf::Vector3f v1, sf::Vector3f v2, sf::Vector2f t0, sf::Vector2f t1, sf::Vector2f t2)
-	{
-		verts[0] = v0; verts[1] = v1; verts[2] = v2;
-		tCoords[0] = t0; tCoords[1] = t1; tCoords[2] = t2;
-	}
-};
-

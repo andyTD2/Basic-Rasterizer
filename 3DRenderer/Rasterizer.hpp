@@ -2,6 +2,7 @@
 #include <vector>
 #include "math.h"
 #include "func.hpp"
+#include "Scene.hpp"
 #include <iostream>
 
 class Rasterizer

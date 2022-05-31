@@ -1,6 +1,5 @@
 #pragma once
 #include "Rasterizer.hpp"
-#include "func.hpp"
 #include <iostream>
 
 
@@ -104,7 +103,7 @@ int Rasterizer::clip_triangle_near(const Triangle& tri, sf::Vector3f(&proj_verts
 	//early outs
 	if (proj_verts[0].z > c_near && proj_verts[1].z > c_near && proj_verts[2].z > c_near)
 	{
-		out.push_back(Triangle(proj_verts[0], proj_verts[1], proj_verts[2], tri.tCoords[0], tri.tCoords[1], tri.tCoords[2]));
+		out.push_back(Triangle(proj_verts[0], proj_verts[1], proj_verts[2], tri.tCoords[0], tri.tCoords[1], tri.tCoords[2], tri.associatedMtl));
 		return 1;
 	}
 	else if (proj_verts[0].z < c_near && proj_verts[1].z < c_near && proj_verts[2].z < c_near)
@@ -147,7 +146,7 @@ int Rasterizer::clip_triangle_near(const Triangle& tri, sf::Vector3f(&proj_verts
 		
 		one.z = c_near;
 		two.z = c_near;
-		out.push_back(Triangle(one, two, safeVertices[0], newT1, newT2, safeTVertices[0]));
+		out.push_back(Triangle(one, two, safeVertices[0], newT1, newT2, safeTVertices[0], tri.associatedMtl));
 		return 1;
 	}
 
@@ -164,8 +163,8 @@ int Rasterizer::clip_triangle_near(const Triangle& tri, sf::Vector3f(&proj_verts
 		newT2.x = safeTVertices[1].x + (t * (clippedTVertices[0].x - safeTVertices[1].x));
 		newT2.y = safeTVertices[1].y + (t * (clippedTVertices[0].y - safeTVertices[1].y));
 
-		out.push_back(Triangle(one, two, safeVertices[1], newT1, newT2, safeTVertices[1]));
-		out.push_back(Triangle(one, safeVertices[0], safeVertices[1], newT1, safeTVertices[0], safeTVertices[1]));
+		out.push_back(Triangle(one, two, safeVertices[1], newT1, newT2, safeTVertices[1], tri.associatedMtl));
+		out.push_back(Triangle(one, safeVertices[0], safeVertices[1], newT1, safeTVertices[0], safeTVertices[1], tri.associatedMtl));
 
 		return 2;
 	}

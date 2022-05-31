@@ -18,45 +18,51 @@ bool Scene::loadScene(const std::string& fileName)
 	std::vector<sf::Vector2f> textureCoords = { sf::Vector2f(0, 0) };
 	std::string line;
 	std::string firstToken;
+	std::string curMaterial;
 
-	bool lion = false;
 	while (!std::getline(file, line).eof())
 	{
 		std::istringstream iss(line);
 
 		iss >> firstToken;
-		if (firstToken == "v")
+		if (firstToken == "mtllib")
+		{
+			std::string mtlFile;
+			iss >> mtlFile;
+
+			loadTexturesFromMtl(mtlFile);
+		}
+		else if (firstToken == "v")
 		{
 			float vx, vy, vz;
 
 			iss >> vx >> vy >> vz;
 			vertices.push_back(sf::Vector3f(vx, vy, vz));
 		}
-		else if (firstToken == "o")
+		else if (firstToken == "usemtl")
 		{
-			iss >> firstToken;
-			if (firstToken == "sponza_377")
-				lion = true;
-			else lion = false;
+			iss >> curMaterial;
 		}
 		else if (firstToken == "vt")
 		{
 			float vt0, vt1;
 			iss >> vt0 >> vt1;
 
-			if (vt0 < 0)
-				vt0 = 0;
-			if (vt0 > 1)
-				vt0 = 1;
-			if (vt1 < 0)
-				vt1 = 0;
-			if (vt1 > 1)
-				vt1 = 1;
-
+			
+			//if (vt0 < 0)
+			//	vt0 = 0;
+			
+			//if (vt0 > 1)
+			//	vt0 = 1;
+		//	if (vt1 < 0)
+			//	vt1 = 0;
+			//if (vt1 > 1)
+			//	vt1 = 1;
+			
 			textureCoords.push_back(sf::Vector2f(vt0, vt1));
 
 		}
-		else if (lion && firstToken == "f")
+		else if (firstToken == "f")
 		{
 			int v0, v1, v2;
 			int t0, t1, t2;
@@ -83,19 +89,175 @@ bool Scene::loadScene(const std::string& fileName)
 				iss.ignore(line.size(), '/');
 				iss >> t2;
 			}
-			sceneData.push_back(Triangle(vertices[v0], vertices[v1], vertices[v2], textureCoords[t0], textureCoords[t1], textureCoords[t2]));
-			//if (textureCoords[t0].x > 1 || textureCoords[t0].y > 1 ||
-			//	textureCoords[t1].x > 1 || textureCoords[t1].y > 1 ||
-			//	textureCoords[t2].x > 1 || textureCoords[t2].y > 1)
-			//{
-			//	std::cout << "TRIANGLE\n";
-			//	std::cout << textureCoords[t0].x << ", " << textureCoords[t0].y << std::endl;
-			//	std::cout << textureCoords[t1].x << ", " << textureCoords[t1].y << std::endl;
-			//	std::cout << textureCoords[t2].x << ", " << textureCoords[t2].y << std::endl;
-			//	std::cout << line << std::endl;
-			//}
+			sceneData.push_back(Triangle(vertices[v0], vertices[v1], vertices[v2], textureCoords[t0], textureCoords[t1], textureCoords[t2], curMaterial));
 		}
 		
 	}
 	return true;
+}
+
+sf::Uint8* Scene::loadTexture(const std::string& fileName, float& returnWidth, float& returnHeight)
+{
+	std::ifstream file(fileName, std::ios::binary);
+
+	if (file.fail())
+	{
+		std::cout << fileName << " could not be opened." << std::endl;
+		return nullptr;
+	}
+
+	unsigned char header[12];
+	unsigned short tWidth;
+	unsigned short tHeight;
+	unsigned char pixelSize;
+	unsigned char id;
+
+
+	file.read((char*)header, sizeof(unsigned char) * 12);
+	file.read((char*)&tWidth, sizeof(unsigned short));
+	file.read((char*)&tHeight, sizeof(unsigned short));
+	file.read((char*)&pixelSize, sizeof(unsigned char));
+	file.read((char*)&id, sizeof(unsigned char));
+
+
+	sf::Uint8* data = nullptr;
+	sf::Uint8* dataReversed = nullptr;
+
+	if ((int)pixelSize == 32)
+	{
+		int tSize = (int)tWidth * (int)tHeight;
+		data = new sf::Uint8[tSize * 4];
+		dataReversed = new sf::Uint8[tSize * 4];
+		file.read((char*)data, tSize * 4);
+
+		int k = 0;
+		int rowIncr = tWidth * 4;
+
+		/*
+		int curRow = tSize * 4 - rowIncr;
+
+		
+		while (curRow >= 0)
+		{
+			for (int i = curRow; i < (curRow + rowIncr); i += 4)
+			{
+				dataReversed[k] = data[i + 2];
+				dataReversed[k + 1] = data[i + 1];
+				dataReversed[k + 2] = data[i];
+				dataReversed[k + 3] = data[i + 3];
+				k += 4;
+			}
+			curRow -= rowIncr;
+		}
+		*/
+		
+		int curRow = 0;
+		while (curRow < tSize * 4 - rowIncr)
+		{
+			for (int i = curRow; i < (curRow + rowIncr); i+=4)
+			{
+				dataReversed[k] = data[i + 2];
+				dataReversed[k + 1] = data[i + 1];
+				dataReversed[k + 2] = data[i];
+				dataReversed[k + 3] = data[i + 3];
+				k += 4;
+			}
+			curRow += rowIncr;
+		}
+		
+	}
+
+	else if ((int)pixelSize == 24)
+	{
+		int tSize = (int)tWidth * (int)tHeight;
+		data = new sf::Uint8[tSize * 3];
+		dataReversed = new sf::Uint8[tSize * 4];
+		file.read((char*)data, tSize * 3);
+
+		int k = 0;
+		
+		int rowIncr = tWidth * 3;
+		/*
+		int curRow = tSize * 3 - rowIncr;
+
+		
+		while (curRow >= 0)
+		{
+			for (int i = curRow; i < (curRow + rowIncr); i += 3)
+			{
+				dataReversed[k] = data[i + 2];
+				dataReversed[k + 1] = data[i + 1];
+				dataReversed[k + 2] = data[i];
+				dataReversed[k + 3] = 255;
+				k += 4;
+			}
+			curRow -= rowIncr;
+		}
+		*/
+		
+		int curRow = 0;
+		while (curRow < tSize * 3 - rowIncr)
+		{
+			for (int i = curRow; i < (curRow + rowIncr); i += 3)
+			{
+				dataReversed[k] = data[i + 2];
+				dataReversed[k + 1] = data[i + 1];
+				dataReversed[k + 2] = data[i];
+				dataReversed[k + 3] = 255;
+				k += 4;
+			}
+			curRow += rowIncr;
+		}
+		
+	}
+
+	delete[] data;
+	file.close();
+
+	returnWidth = tWidth;
+	returnHeight = tHeight;
+	return dataReversed;
+
+
+}
+
+void Scene::loadTexturesFromMtl(const std::string& mtlFile)
+{
+	std::ifstream file(mtlFile);
+	if (file.fail())
+	{
+		std::cout << mtlFile << " could not be opened." << std::endl;
+		return;
+	}
+
+	std::string line;
+	std::string firstWord;
+	std::string mtlName;
+	std::string textureFileName;
+	while (!std::getline(file, line).eof())
+	{
+		std::istringstream iss(line);
+		iss >> firstWord;
+		
+		if (firstWord == "newmtl")
+		{
+			iss >> mtlName;
+		}
+		else if (firstWord == "map_Kd" && mtlName != "")
+		{
+			iss >> textureFileName;
+
+			float w, h;
+			textureData.insert({ mtlName, loadTexture(textureFileName, w, h) });
+			widthMap.insert({ mtlName, w });
+			heightMap.insert({ mtlName, h });
+			mtlName = "";
+		}
+		else if (firstWord == "map_Kd" && mtlName == "")
+		{
+			std::cout << "Error, texture file not associated with any object name.\n";
+		}
+	}
+	file.close();
+	return;
 }
