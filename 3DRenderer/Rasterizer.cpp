@@ -98,11 +98,13 @@ void Rasterizer::rot_z(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[
 	return;
 }
 
-int Rasterizer::clip_triangle_near(const Triangle& tri, sf::Vector3f(&proj_verts)[3], std::vector<Triangle>& out)
+int Rasterizer::clip_triangle_near(const Triangle& tri, sf::Vector3f(&proj_verts)[3], std::vector<Triangle>& out) const
 {
 	//early outs
-	if (proj_verts[0].z > c_near && proj_verts[1].z > c_near && proj_verts[2].z > c_near)
+	
+	if (proj_verts[0].z >= c_near && proj_verts[1].z >= c_near && proj_verts[2].z >= c_near)
 	{
+
 		out.push_back(Triangle(proj_verts[0], proj_verts[1], proj_verts[2], tri.tCoords[0], tri.tCoords[1], tri.tCoords[2], tri.associatedMtl));
 		return 1;
 	}
@@ -144,8 +146,6 @@ int Rasterizer::clip_triangle_near(const Triangle& tri, sf::Vector3f(&proj_verts
 		newT2.x = safeTVertices[0].x + (t * (clippedTVertices[1].x - safeTVertices[0].x));
 		newT2.y = safeTVertices[0].y + (t * (clippedTVertices[1].y - safeTVertices[0].y));
 		
-		one.z = c_near;
-		two.z = c_near;
 		out.push_back(Triangle(one, two, safeVertices[0], newT1, newT2, safeTVertices[0], tri.associatedMtl));
 		return 1;
 	}

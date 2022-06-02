@@ -64,6 +64,7 @@ bool Scene::loadScene(const std::string& fileName)
 		}
 		else if (firstToken == "f")
 		{
+
 			int v0, v1, v2;
 			int t0, t1, t2;
 
@@ -230,17 +231,36 @@ void Scene::loadTexturesFromMtl(const std::string& mtlFile)
 		return;
 	}
 
+	if (!textureData.empty())
+		textureData.clear();
+
+	sf::Uint8* placeHolderTexture = new sf::Uint8[1000 * 1000 * 4];
+	for (int i = 0; i < 1000 * 1000 * 4; i += 4)
+	{
+		placeHolderTexture[i] = 200;
+		placeHolderTexture[i + 1] = 90;
+		placeHolderTexture[i + 2] = 235;
+		placeHolderTexture[i + 3] = 255;
+	}
+
 	std::string line;
 	std::string firstWord;
-	std::string mtlName;
+	std::string mtlName = "";
 	std::string textureFileName;
 	while (!std::getline(file, line).eof())
 	{
 		std::istringstream iss(line);
 		iss >> firstWord;
 		
-		if (firstWord == "newmtl")
+		if (firstWord == "newmtl" && mtlName == "")
 		{
+			iss >> mtlName;
+		}
+		else if (firstWord == "newmtl" && mtlName != "")
+		{
+			textureData.insert({ mtlName, placeHolderTexture });
+			widthMap.insert({ mtlName, 1000 });
+			heightMap.insert({ mtlName, 1000 });
 			iss >> mtlName;
 		}
 		else if (firstWord == "map_Kd" && mtlName != "")
@@ -255,7 +275,9 @@ void Scene::loadTexturesFromMtl(const std::string& mtlFile)
 		}
 		else if (firstWord == "map_Kd" && mtlName == "")
 		{
-			std::cout << "Error, texture file not associated with any object name.\n";
+			std::string bad;
+			iss >> bad;
+			std::cout << "Error, texture file: " << bad << " not associated with any object name.\n";
 		}
 	}
 	file.close();

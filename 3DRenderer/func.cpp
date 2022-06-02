@@ -4,7 +4,7 @@
 sf::Vector3f func::getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_normal, sf::Vector3f p0, sf::Vector3f p1, float& t)
 {
 	plane_normal = func::norm3f(plane_normal);
-	float dist = -func::dotpro(plane_point, plane_normal);
+	float dist = -func::dotpro(plane_normal, plane_point);
 	float ad = func::dotpro(p0, plane_normal);
 	float bd = func::dotpro(p1, plane_normal);
 	t = (-dist - ad) / (bd - ad);
@@ -89,10 +89,8 @@ void func::matrixXmatrix (const float left_mat[4][4], const float right_mat[4][4
 
 sf::Vector3f func::norm3f(const sf::Vector3f& in)
 {
-	float mag = sqrt((in.x * in.x) + (in.y * in.y) + (in.z * in.z));
-	if (mag > .000001)
-		return sf::Vector3f(in.x / mag, in.y / mag, in.z / mag);
-	return sf::Vector3f(0, 0, 0);
+	float mag = sqrt(dotpro(in, in));
+	return sf::Vector3f(in.x / mag, in.y / mag, in.z / mag);
 }
 
 sf::Vector3f func::crossv(const sf::Vector3f l, const sf::Vector3f r)

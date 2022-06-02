@@ -8,8 +8,14 @@
 struct Triangle
 {
 	sf::Vector3f verts[3];
+	sf::Vector3f projVerts[3];
 	sf::Vector2f tCoords[3];
 	std::string associatedMtl;
+
+	int bLeft;
+	int bRight;
+	int bTop;
+	int bBot;
 
 	Triangle()
 	{
