@@ -29,8 +29,8 @@ void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vect
 		result.z /= w;
 	}
 	*/
-	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y), 
-							   _mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
+	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y),
+		_mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
 
 	__m128 multiplyZs = _mm_mul_ps(_mm_setr_ps(vec.z, vec.z, vec.z, vec.z), _mm_setr_ps(matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]));
 
@@ -50,10 +50,10 @@ void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vect
 		result.y /= w;
 		result.z /= w;
 	}
-	
-	
 
-	
+
+
+
 
 }
 
@@ -74,7 +74,7 @@ float func::edge_f(const sf::Vector2f& pixel, const sf::Vector3f& v0, const sf::
 	return temp;
 }
 
-void func::matrixXmatrix (const float left_mat[4][4], const float right_mat[4][4], float (&res)[4][4])
+void func::matrixXmatrix(const float left_mat[4][4], const float right_mat[4][4], float(&res)[4][4])
 {
 	for (uint8_t i = 0; i < 4; ++i) {
 		for (uint8_t j = 0; j < 4; ++j) {
@@ -96,8 +96,8 @@ sf::Vector3f func::norm3f(const sf::Vector3f& in)
 sf::Vector3f func::crossv(const sf::Vector3f l, const sf::Vector3f r)
 {
 	return sf::Vector3f((l.y * r.z) - (l.z * r.y),
-						(l.z * r.x) - (l.x * r.z),
-						(l.x * r.y) - (l.y * r.x));
+		(l.z * r.x) - (l.x * r.z),
+		(l.x * r.y) - (l.y * r.x));
 }
 
 float func::dotpro(const sf::Vector3f l, const sf::Vector3f r)
@@ -117,6 +117,12 @@ sf::Vector2f func::vec2XScalar(const sf::Vector2f l, float r)
 
 void func::print(const sf::Vector3f& i)
 {
-	
+
 	std::cout << std::setprecision(50) << "x: " << i.x << " y: " << i.y << " z: " << i.z << std::endl;
+}
+
+float func::distance(sf::Vector3f p1, sf::Vector3f p2)
+{
+	return sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2) + pow(p2.z - p1.z, 2) * 1.0);
+
 }

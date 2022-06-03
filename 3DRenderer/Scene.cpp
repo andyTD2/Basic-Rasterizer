@@ -9,7 +9,7 @@ bool Scene::loadScene(const std::string& fileName)
 	}
 
 	std::ifstream file(fileName);
-	
+
 	if (!file.is_open())
 		return false;
 
@@ -48,17 +48,17 @@ bool Scene::loadScene(const std::string& fileName)
 			float vt0, vt1;
 			iss >> vt0 >> vt1;
 
-			
+
 			//if (vt0 < 0)
 			//	vt0 = 0;
-			
+
 			//if (vt0 > 1)
 			//	vt0 = 1;
 		//	if (vt1 < 0)
 			//	vt1 = 0;
 			//if (vt1 > 1)
 			//	vt1 = 1;
-			
+
 			textureCoords.push_back(sf::Vector2f(vt0, vt1));
 
 		}
@@ -92,7 +92,7 @@ bool Scene::loadScene(const std::string& fileName)
 			}
 			sceneData.push_back(Triangle(vertices[v0], vertices[v1], vertices[v2], textureCoords[t0], textureCoords[t1], textureCoords[t2], curMaterial));
 		}
-		
+
 	}
 	return true;
 }
@@ -137,7 +137,7 @@ sf::Uint8* Scene::loadTexture(const std::string& fileName, float& returnWidth, f
 		/*
 		int curRow = tSize * 4 - rowIncr;
 
-		
+
 		while (curRow >= 0)
 		{
 			for (int i = curRow; i < (curRow + rowIncr); i += 4)
@@ -151,11 +151,11 @@ sf::Uint8* Scene::loadTexture(const std::string& fileName, float& returnWidth, f
 			curRow -= rowIncr;
 		}
 		*/
-		
+
 		int curRow = 0;
 		while (curRow < tSize * 4 - rowIncr)
 		{
-			for (int i = curRow; i < (curRow + rowIncr); i+=4)
+			for (int i = curRow; i < (curRow + rowIncr); i += 4)
 			{
 				dataReversed[k] = data[i + 2];
 				dataReversed[k + 1] = data[i + 1];
@@ -165,7 +165,7 @@ sf::Uint8* Scene::loadTexture(const std::string& fileName, float& returnWidth, f
 			}
 			curRow += rowIncr;
 		}
-		
+
 	}
 
 	else if ((int)pixelSize == 24)
@@ -176,12 +176,12 @@ sf::Uint8* Scene::loadTexture(const std::string& fileName, float& returnWidth, f
 		file.read((char*)data, tSize * 3);
 
 		int k = 0;
-		
+
 		int rowIncr = tWidth * 3;
 		/*
 		int curRow = tSize * 3 - rowIncr;
 
-		
+
 		while (curRow >= 0)
 		{
 			for (int i = curRow; i < (curRow + rowIncr); i += 3)
@@ -195,7 +195,7 @@ sf::Uint8* Scene::loadTexture(const std::string& fileName, float& returnWidth, f
 			curRow -= rowIncr;
 		}
 		*/
-		
+
 		int curRow = 0;
 		while (curRow < tSize * 3 - rowIncr)
 		{
@@ -209,7 +209,7 @@ sf::Uint8* Scene::loadTexture(const std::string& fileName, float& returnWidth, f
 			}
 			curRow += rowIncr;
 		}
-		
+
 	}
 
 	delete[] data;
@@ -251,7 +251,7 @@ void Scene::loadTexturesFromMtl(const std::string& mtlFile)
 	{
 		std::istringstream iss(line);
 		iss >> firstWord;
-		
+
 		if (firstWord == "newmtl" && mtlName == "")
 		{
 			iss >> mtlName;

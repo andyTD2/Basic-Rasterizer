@@ -30,7 +30,7 @@ struct Triangle
 };
 
 
-class Scene 
+class Scene
 {
 public:
 	std::vector<Triangle> sceneData;

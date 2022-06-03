@@ -19,4 +19,5 @@ namespace func {
 	sf::Vector3f vec3XScalar(const sf::Vector3f l, float r);
 	sf::Vector2f vec2XScalar(const sf::Vector2f l, float r);
 	void print(const sf::Vector3f& i);
+	float distance(sf::Vector3f p1, sf::Vector3f p2);
 }

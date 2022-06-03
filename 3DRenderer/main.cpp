@@ -32,13 +32,28 @@ void toViewSpace(int start, int end, const std::vector<Triangle>& sceneData, con
 		Triangle triangle = sceneData[i];
 		sf::Vector3f view_verts[3];
 
+		Triangle outT;
+		outT.associatedMtl = triangle.associatedMtl;
+		outT.tCoords[0] = triangle.tCoords[0];
+		outT.tCoords[1] = triangle.tCoords[1];
+		outT.tCoords[2] = triangle.tCoords[2];
+		//func::vecXmatrix(triangle.verts[0], camMatrix, outT.verts[0]);
+		//func::vecXmatrix(triangle.verts[1], camMatrix, outT.verts[1]);
+		//func::vecXmatrix(triangle.verts[2], camMatrix, outT.verts[2]);
 		func::vecXmatrix(triangle.verts[0], camMatrix, view_verts[0]);
 		func::vecXmatrix(triangle.verts[1], camMatrix, view_verts[1]);
 		func::vecXmatrix(triangle.verts[2], camMatrix, view_verts[2]);
 
+		////float bLeft = std::min({ view_verts[0].x, view_verts[1].x, view_verts[2].x });
+		//float bTop = std::min({ view_verts[0].y, view_verts[1].y, view_verts[2].y });
+		//float bRight = std::max({ view_verts[0].x, view_verts[1].x, view_verts[2].x });
+		//float bBot = std::max({ view_verts[0].y, view_verts[1].y, view_verts[2].y });
+
+		//if (bLeft < rasterizer.w_width && bRight > -rasterizer.w_width && bTop < rasterizer.w_height && bBot > -rasterizer.w_height)
 		rasterizer.clip_triangle_near(triangle, view_verts, out);
+		//out.push_back(triangle);
 	}
-	
+
 }
 void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Rasterizer& rasterizer, sf::Uint8*& buffer)
 {
@@ -97,7 +112,7 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 				{
 					//USE THE FIRST IF STATEMENT IF YOU DONT WANT BACKFACE CULLING
 					if ((one[k] <= 0 && two[k] <= 0 && three[k] <= 0) || (one[k] >= 0 && two[k] >= 0 && three[k] >= 0))
-					//if ((one[k] <= 0 && two[k] <= 0 && three[k] <= 0))
+						//if ((one[k] <= 0 && two[k] <= 0 && three[k] <= 0))
 					{
 						float b0t = one[k] / (area);
 						float b1t = two[k] / (area);
@@ -143,18 +158,13 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 
 
 							int index2 = (floor(texel.x) + floor(texel.y) * tWidth) * 4;
-							z_buffer[zindex][i] = inv_z;
 							if (triangleTexture[index2 + 3] > 0)
 							{
+								z_buffer[zindex][i] = inv_z;
 								buffer[index] = triangleTexture[index2];
 								buffer[index + 1] = triangleTexture[index2 + 1];
 								buffer[index + 2] = triangleTexture[index2 + 2];
 								buffer[index + 3] = triangleTexture[index2 + 3];
-								//z_buffer[zindex][i] = inv_z;
-								//buffer[index] = b0t * 255;
-								//buffer[index + 1] = b1t * 255;
-							//	buffer[index + 2] = b2t * 255;
-								//buffer[index + 3] = 255;
 							}
 
 
@@ -181,7 +191,8 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 int main()
 {
 	//height & width values must be divisible by 16
-	Rasterizer rasterizer = Rasterizer(1024, 1024, .1, 10, 60);
+	//recommend near value of 2, expect articfacts if < 1
+	Rasterizer rasterizer = Rasterizer(1024, 1024, 2, 1000, 60);
 	sf::RenderWindow window(sf::VideoMode(rasterizer.w_width, rasterizer.w_height), "3D Render");
 
 	sf::Clock clock = sf::Clock::Clock();
@@ -210,7 +221,7 @@ int main()
 
 	int bufferSize = rasterizer.w_width * rasterizer.w_height * 4;
 
-	
+
 	int ft = 0;
 	int numTiles = 8;
 
@@ -259,7 +270,7 @@ int main()
 
 		std::vector<std::vector<Triangle>> triangleLists(11, std::vector<Triangle>());
 
-		
+
 
 		{
 			int increment = scene.sceneData.size() / 11;
@@ -268,16 +279,16 @@ int main()
 			int i = 0;
 			while (i < 10)
 			{
-				toViewSpace(start, end, scene.sceneData, cam.camMatrix, rasterizer, triangleLists[i]);
-				//g.run([&, start, end, i] {toViewSpace(start, end, scene.sceneData, cam.camMatrix, rasterizer, triangleLists[i]); });
+				//toViewSpace(start, end, scene.sceneData, cam.camMatrix, rasterizer, triangleLists[i]);
+				g.run([&, start, end, i] {toViewSpace(start, end, scene.sceneData, cam.camMatrix, rasterizer, triangleLists[i]); });
 				start = end;
 				end = start + increment;
 				i++;
 			}
 			//g.run([&, start, i] {toViewSpace(start, scene.sceneData.size(), scene.sceneData, cam.camMatrix, rasterizer, triangleLists[i]); });
-		//	g.wait();
+			g.wait();
 		}
-		
+
 
 
 
@@ -286,7 +297,7 @@ int main()
 
 		std::vector<std::vector<Tile>> tiles(numTiles, std::vector<Tile>(numTiles));
 
-		
+
 		for (int i = 0; i < numTiles; ++i)
 		{
 			for (int j = 0; j < numTiles; ++j)
@@ -299,43 +310,45 @@ int main()
 				tiles[i][j] = tile;
 			}
 		}
-		
-	
-		
+
+
+
 		for (auto& list : triangleLists)
 		{
 			for (auto& tri : list)
 			{
-				rasterizer.project_triangle(tri.verts, rasterizer.p_mat, tri.projVerts);
-
-				tri.bLeft = std::min({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
-				tri.bTop = std::min({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
-				tri.bRight = std::max({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
-				tri.bBot = std::max({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
-
-				for (auto& col : tiles)
+				if (rasterizer.project_triangle(tri, rasterizer.p_mat))
 				{
-					for (auto& tile : col)
+
+					tri.bLeft = std::min({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
+					tri.bTop = std::min({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
+					tri.bRight = std::max({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
+					tri.bBot = std::max({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
+
+					for (auto& col : tiles)
 					{
-						if (tri.bLeft < tile.bRight && tri.bRight > tile.bLeft && tri.bTop < tile.bBot && tri.bBot > tile.bTop)
+						for (auto& tile : col)
 						{
-							tile.trianglesToRender.push_back(tri);
+							if (tri.bLeft < tile.bRight && tri.bRight > tile.bLeft && tri.bTop < tile.bBot && tri.bBot > tile.bTop)
+							{
+								tile.trianglesToRender.push_back(tri);
+							}
 						}
 					}
 				}
 			}
 		}
-		
+
 		for (auto& row : tiles)
 		{
 			for (auto& tile : row)
 				g.run([&] {bar(tile, scene, z_buffer, rasterizer, buffer); });
 		}
-		
+
 		g.wait();
-		
-		
-		
+
+
+
 		int numTrisBeingDrawn = 0;
 
 

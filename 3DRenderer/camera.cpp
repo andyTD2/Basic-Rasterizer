@@ -9,8 +9,8 @@ Camera::Camera()
 	rotationSpeed = .5; panSpeed = .1;
 }
 
-void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool rotateDown, 
-							bool panForward, bool panBackwards, bool panLeft, bool panRight)
+void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool rotateDown,
+	bool panForward, bool panBackwards, bool panLeft, bool panRight)
 {
 	velocity = func::vec3XScalar(lookDir, panSpeed);
 

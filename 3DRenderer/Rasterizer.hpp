@@ -20,7 +20,7 @@ public:
 
 
 	Rasterizer(int _w_width, int _w_height, float _c_near, float _c_far, int fov);
-	void project_triangle(const sf::Vector3f(&tri_verts)[3], float mat[4][4], sf::Vector3f(&proj_verts)[3]);
+	bool project_triangle(Triangle& tri, float mat[4][4]);
 	void rot_x(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3]);
 	void rot_y(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3]);
 	void rot_z(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3]);
