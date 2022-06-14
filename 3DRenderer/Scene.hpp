@@ -7,9 +7,9 @@
 
 struct Triangle
 {
-	sf::Vector3f verts[3];
-	sf::Vector3f projVerts[3];
-	sf::Vector2f tCoords[3];
+	vec4 verts[3];
+	vec4 projVerts[3];
+	vec2 tCoords[3];
 	std::string associatedMtl;
 
 	int bLeft;
@@ -19,9 +19,22 @@ struct Triangle
 
 	Triangle()
 	{
-
 	}
-	Triangle(sf::Vector3f v0, sf::Vector3f v1, sf::Vector3f v2, sf::Vector2f t0, sf::Vector2f t1, sf::Vector2f t2, std::string newMtl)
+	Triangle(const Triangle& other)
+	{
+		for (int i = 0; i < 3; ++i)
+		{
+			this->verts[i] = other.verts[i];
+			this->projVerts[i] = other.projVerts[i];
+			this->tCoords[i] = other.tCoords[i];
+		}
+		this->associatedMtl = other.associatedMtl;
+		this->bLeft = other.bLeft;
+		this->bRight = other.bRight;
+		this->bBot = other.bBot;
+		this->bTop = other.bTop;
+	}
+	Triangle(vec4 v0, vec4 v1, vec4 v2, vec2 t0, vec2 t1, vec2 t2, std::string newMtl)
 	{
 		verts[0] = v0; verts[1] = v1; verts[2] = v2;
 		tCoords[0] = t0; tCoords[1] = t1; tCoords[2] = t2;

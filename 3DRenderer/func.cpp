@@ -1,34 +1,36 @@
 #include "func.hpp"
 #include <iomanip>
 
-sf::Vector3f func::getIntersection(sf::Vector3f plane_point, sf::Vector3f plane_normal, sf::Vector3f p0, sf::Vector3f p1, float& t)
+vec4 func::getIntersection(vec4 plane_point, vec4 plane_normal, vec4 p0, vec4 p1, float& t)
 {
-	plane_normal = func::norm3f(plane_normal);
-	float dist = -func::dotpro(plane_normal, plane_point);
-	float ad = func::dotpro(p0, plane_normal);
-	float bd = func::dotpro(p1, plane_normal);
+	plane_normal = func::norm(plane_normal);
+	float dist = -func::dotPro(plane_normal, plane_point);
+	float ad = func::dotPro(p0, plane_normal);
+	float bd = func::dotPro(p1, plane_normal);
 	t = (-dist - ad) / (bd - ad);
-	sf::Vector3f line = p1 - p0;
-	sf::Vector3f lineIntersect;
+	vec4 line = p1 - p0;
+	vec4 lineIntersect;
 	lineIntersect.x = line.x * t; lineIntersect.y = line.y * t; lineIntersect.z = line.z * t;
 	return (p0 + lineIntersect);
 
 }
 
-void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vector3f& result)
+float func::vecXmatrix(const vec4& vec, const float matrix[4][4], vec4& result, bool project)
 {
-	/*result.x = vec.x * matrix[0][0] + vec.y * matrix[1][0] + vec.z * matrix[2][0] + matrix[3][0];
-	result.y = vec.x * matrix[0][1] + vec.y * matrix[1][1] + vec.z * matrix[2][1] + matrix[3][1];
-	result.z = vec.x * matrix[0][2] + vec.y * matrix[1][2] + vec.z * matrix[2][2] + matrix[3][2];
-	float w = vec.x * matrix[0][3] + vec.y * matrix[1][3] + vec.z * matrix[2][3] + matrix[3][3];
+	//result.x = vec.x * matrix[0][0] + vec.y * matrix[1][0] + vec.z * matrix[2][0] + matrix[3][0];
+	//result.y = vec.x * matrix[0][1] + vec.y * matrix[1][1] + vec.z * matrix[2][1] + matrix[3][1];
+	//result.z = vec.x * matrix[0][2] + vec.y * matrix[1][2] + vec.z * matrix[2][2] + matrix[3][2];
+	//result.w = vec.x * matrix[0][3] + vec.y * matrix[1][3] + vec.z * matrix[2][3] + matrix[3][3];
 
-	if (w != 1)
-	{
-		result.x /= w;
-		result.y /= w;
-		result.z /= w;
-	}
-	*/
+	//if (w != 1)
+	//{
+	//	result.x /= w;
+	//	result.y /= w;
+	//	result.z /= w;
+	//}
+	
+
+	
 	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y),
 		_mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
 
@@ -40,24 +42,26 @@ void func::vecXmatrix(const sf::Vector3f vec, const float matrix[4][4], sf::Vect
 
 	__m128 sum = _mm_add_ps(_mm256_extractf128_ps(add, 0), _mm256_extractf128_ps(add, 1));
 	float* sumArray = (float*)&sum;
+	
 	result.x = sumArray[0];
 	result.y = sumArray[1];
 	result.z = sumArray[2];
-	float w = sumArray[3];
-	if (w != 1)
+	result.w = sumArray[3];
+	
+	if (result.w != 1 && project)
 	{
-		result.x /= w;
-		result.y /= w;
-		result.z /= w;
+		result.x /= result.w;
+		result.y /= result.w;
+		result.z /= result.w;
 	}
-
+	return result.w;
 
 
 
 
 }
 
-float func::edge_f(const sf::Vector2f& pixel, const sf::Vector3f& v0, const sf::Vector3f& v1)
+float func::edge_f(const vec2& pixel, const vec4& v0, const vec4& v1)
 {
 
 	//std::cout << "pixel.x: " << pixel.x << ", " << pixel.y << std::endl;
@@ -87,22 +91,27 @@ void func::matrixXmatrix(const float left_mat[4][4], const float right_mat[4][4]
 	return;
 }
 
-sf::Vector3f func::norm3f(const sf::Vector3f& in)
+vec4 func::norm(const vec4& in)
 {
-	float mag = sqrt(dotpro(in, in));
-	return sf::Vector3f(in.x / mag, in.y / mag, in.z / mag);
+	float mag = sqrt(dotPro(in, in));
+	return vec4(in.x / mag, in.y / mag, in.z / mag);
 }
 
-sf::Vector3f func::crossv(const sf::Vector3f l, const sf::Vector3f r)
+vec4 func::crossProd(const vec4& l, const vec4& r)
 {
-	return sf::Vector3f((l.y * r.z) - (l.z * r.y),
+	return vec4((l.y * r.z) - (l.z * r.y),
 		(l.z * r.x) - (l.x * r.z),
 		(l.x * r.y) - (l.y * r.x));
 }
 
-float func::dotpro(const sf::Vector3f l, const sf::Vector3f r)
+float func::dotPro(const vec4& l, const vec4& r)
 {
-	return (l.x * r.x) + (l.y * r.y) + (l.z * r.z);
+	return ((l.x * r.x) + (l.y * r.y) + (l.z * r.z));
+}
+
+float func::dotpro2f(const vec2& l, const vec2& r)
+{
+	return (l.x * r.x) + (l.y * r.y);
 }
 
 sf::Vector3f func::vec3XScalar(const sf::Vector3f l, float r)
@@ -115,14 +124,87 @@ sf::Vector2f func::vec2XScalar(const sf::Vector2f l, float r)
 	return sf::Vector2f(l.x * r, l.y * r);
 }
 
-void func::print(const sf::Vector3f& i)
+void func::print(const vec4& i)
 {
 
-	std::cout << std::setprecision(50) << "x: " << i.x << " y: " << i.y << " z: " << i.z << std::endl;
+	std::cout << std::setprecision(10) << i.x << ", " << i.y << ", " << i.z << std::endl;
+}
+void func::print(const vec2& i)
+{
+
+	std::cout << std::setprecision(10) << i.x << ", " << i.y << std::endl;
 }
 
-float func::distance(sf::Vector3f p1, sf::Vector3f p2)
+float func::distance(const vec4& p1, const vec4& p2)
 {
 	return sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2) + pow(p2.z - p1.z, 2) * 1.0);
 
+}
+
+vec4::vec4()
+{
+	x = 0;
+	y = 0;
+	z = 0;
+	w = 1;
+}
+vec4::vec4(float newX, float newY, float newZ)
+{
+	x = newX;
+	y = newY;
+	z = newZ;
+	w = 1;
+}
+vec4::vec4(const vec4& other)
+{
+	this->x = other.x;
+	this->y = other.y;
+	this->z = other.z;
+	this->w = other.w;
+}
+
+
+vec4 vec4::operator+(const vec4& other)
+{
+	return vec4(x + other.x, y + other.y, z + other.z);
+}
+vec4& vec4::operator+=(const vec4& other)
+{
+	this->x += other.x;
+	this->y += other.y;
+	this->z += other.z;
+
+	return *this;
+}
+vec4 vec4::operator-(const vec4& other) const
+{
+	return vec4(x - other.x, y - other.y, z - other.z);
+}
+vec4& vec4::operator-=(const vec4& other)
+{
+	this->x -= other.x;
+	this->y -= other.y;
+	this->z -= other.z;
+
+	return *this;
+}
+vec4 vec4::operator*(float r)
+{
+	return vec4(x * r, y * r, z * r);
+}
+
+vec2::vec2()
+{
+	x = 0;
+	y = 0;
+}
+vec2::vec2(float newX, float newY)
+{
+	x = newX;
+	y = newY;
+}
+
+float func::getDist(const vec4& planeNormal, const vec4& planePoint, const vec4& point)
+{
+	return func::dotPro(planeNormal, (point - planePoint));
 }

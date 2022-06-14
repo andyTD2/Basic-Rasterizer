@@ -9,10 +9,19 @@ Camera::Camera()
 	rotationSpeed = .5; panSpeed = .1;
 }
 
-void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool rotateDown,
-	bool panForward, bool panBackwards, bool panLeft, bool panRight)
+Camera::Camera(float newRotationSpeed, float newPanSpeed)
 {
-	velocity = func::vec3XScalar(lookDir, panSpeed);
+	camPos.x = 0; camPos.y = 0; camPos.z = 0;
+	lookDir.x = 0; lookDir.y = 0; lookDir.z = 1;
+	curXRotation = 0; curYRotation = 0;
+	rotationSpeed = newRotationSpeed;
+	panSpeed = newPanSpeed;
+}
+
+void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool rotateDown,
+	bool panForward, bool panBackwards, bool panLeft, bool panRight, const Rasterizer& rasterizer)
+{
+	velocity = lookDir * panSpeed;
 
 	if (panForward)
 		camPos += velocity;
@@ -32,15 +41,15 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 
 	if (panLeft)
 	{
-		sf::Vector3f moveLeft = func::norm3f(func::crossv(velocity, sf::Vector3f(0, 1, 0)));
-		moveLeft = func::vec3XScalar(moveLeft, panSpeed);
+		vec4 moveLeft = func::norm(func::crossProd(velocity, vec4(0, 1, 0)));
+		moveLeft = moveLeft * panSpeed;
 		camPos += moveLeft;
 	}
 
 	if (panRight)
 	{
-		sf::Vector3f moveRight = func::norm3f(func::crossv(velocity, sf::Vector3f(0, 1, 0)));
-		moveRight = func::vec3XScalar(moveRight, panSpeed);
+		vec4 moveRight = func::norm(func::crossProd(velocity, vec4(0, 1, 0)));
+		moveRight = moveRight * panSpeed;
 		camPos -= moveRight;
 	}
 
@@ -60,18 +69,23 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 	};
 
 
-	sf::Vector3f target(0, 0, 1);
-	func::vecXmatrix(target, x_mat, lookDir);
-	func::vecXmatrix(lookDir, y_mat, lookDir);
+	vec4 target(0, 0, 1);
+	func::vecXmatrix(target, x_mat, lookDir, false);
+	func::vecXmatrix(lookDir, y_mat, lookDir, false);
 	target = camPos + lookDir;
 
-	sf::Vector3f up(0, 1, 0);
-	sf::Vector3f forward = func::norm3f(target - camPos);
-	forward = func::norm3f(forward);
-	float temp = func::dotpro(up, forward);
-	sf::Vector3f a(temp * forward.x, temp * forward.y, temp * forward.z);
-	sf::Vector3f newUp = func::norm3f(up - a);
-	sf::Vector3f cam_right = func::crossv(func::norm3f(newUp), forward);
+	vec4 up(0, 1, 0);
+	vec4 forward = func::norm(target - camPos);
+	float temp = func::dotPro(up, forward);
+	vec4 a(temp * forward.x, temp * forward.y, temp * forward.z);
+	vec4 newUp = func::norm(up - a);
+	vec4 cam_right = func::crossProd(func::norm(newUp), forward);
+
+	curRight = func::norm(cam_right);
+	curForward = func::norm(forward);
+	curUp = func::norm(newUp);
+
+
 
 	camMatrix[0][0] = cam_right.x; camMatrix[0][1] = newUp.x; camMatrix[0][2] = forward.x; camMatrix[0][3] = 0.0f;
 	camMatrix[1][0] = cam_right.y; camMatrix[1][1] = newUp.y; camMatrix[1][2] = forward.y; camMatrix[1][3] = 0.0f;
@@ -80,7 +94,30 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 	camMatrix[3][1] = -(camPos.x * camMatrix[0][1] + camPos.y * camMatrix[1][1] + camPos.z * camMatrix[2][1]);
 	camMatrix[3][2] = -(camPos.x * camMatrix[0][2] + camPos.y * camMatrix[1][2] + camPos.z * camMatrix[2][2]);
 	camMatrix[3][3] = 1.0f;
+
+
+	//now update our frustum normals(necessary for clipping/culling)
+	vec4 farCenter = camPos + (curForward * rasterizer.c_far);
+	vec4 eUp = curUp * (rasterizer.fHeight / 2);
+	vec4 eRight = curRight * (rasterizer.fWidth / 2);
+	vec4 farTopRight = farCenter + eUp + eRight;
+	vec4 farTopLeft = farCenter + eUp - eRight;
+	vec4 farBotRight = farCenter - eUp + eRight;
+
+
+	vec4 nearCenter = camPos + (curForward * rasterizer.c_near);
+	eUp = curUp * (rasterizer.nHeight / 2);
+	eRight = curRight * (rasterizer.nWidth / 2);
+	vec4 nearTopLeft = nearCenter + eUp - eRight;
+	vec4 nearBotLeft = nearCenter - eUp - eRight;
+	vec4 nearBotRight = nearCenter - eUp + eRight;
+
+	rightNormal = func::norm(func::crossProd((farTopRight - farBotRight), (nearBotRight - farBotRight)));
+	leftNormal = func::norm(func::crossProd((farTopLeft - nearTopLeft), (nearBotLeft - nearTopLeft)));
+	topNormal = func::norm(func::crossProd((nearTopLeft - farTopLeft), (farTopRight - farTopLeft)));
+	botNormal = func::norm(func::crossProd((nearBotLeft - nearBotRight), (farBotRight - nearBotRight)));
 }
+
 
 void Camera::setRotationSpeed(float newSpeed)
 {

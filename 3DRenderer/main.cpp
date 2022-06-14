@@ -11,6 +11,7 @@
 #include <mutex>
 #include "Scene.hpp"
 #include "tbb/parallel_for.h"
+#include <time.h>
 
 struct Tile
 {
@@ -23,36 +24,49 @@ struct Tile
 	std::vector<Triangle> trianglesToRender;
 };
 
-
-void toViewSpace(int start, int end, const std::vector<Triangle>& sceneData, const float camMatrix[4][4], const Rasterizer& rasterizer, std::vector<Triangle>& out)
+void foobar(std::vector<Triangle>& list, Rasterizer& rasterizer, std::vector<Triangle>& out)
 {
-
-	for (int i = start; i < end; ++i)
+	for (auto& tri : list)
 	{
-		Triangle triangle = sceneData[i];
-		sf::Vector3f view_verts[3];
+		rasterizer.project_triangle(tri, rasterizer.p_mat, out);
+	}
+}
+void toViewSpace(const Rasterizer& rasterizer, std::vector<Triangle>& out, const Camera& cam, Triangle& triangle)
+{
+//
+	//for (int i = start; i < end; ++i)
+	//{
+		//Triangle triangle = sceneData[i];
+		vec4 view_verts[3];
 
-		Triangle outT;
-		outT.associatedMtl = triangle.associatedMtl;
-		outT.tCoords[0] = triangle.tCoords[0];
-		outT.tCoords[1] = triangle.tCoords[1];
-		outT.tCoords[2] = triangle.tCoords[2];
-		//func::vecXmatrix(triangle.verts[0], camMatrix, outT.verts[0]);
-		//func::vecXmatrix(triangle.verts[1], camMatrix, outT.verts[1]);
-		//func::vecXmatrix(triangle.verts[2], camMatrix, outT.verts[2]);
-		func::vecXmatrix(triangle.verts[0], camMatrix, view_verts[0]);
-		func::vecXmatrix(triangle.verts[1], camMatrix, view_verts[1]);
-		func::vecXmatrix(triangle.verts[2], camMatrix, view_verts[2]);
+		func::vecXmatrix(triangle.verts[0], cam.camMatrix, view_verts[0], false);
+		func::vecXmatrix(triangle.verts[1], cam.camMatrix, view_verts[1], false);
+		func::vecXmatrix(triangle.verts[2], cam.camMatrix, view_verts[2], false);
 
-		////float bLeft = std::min({ view_verts[0].x, view_verts[1].x, view_verts[2].x });
-		//float bTop = std::min({ view_verts[0].y, view_verts[1].y, view_verts[2].y });
-		//float bRight = std::max({ view_verts[0].x, view_verts[1].x, view_verts[2].x });
-		//float bBot = std::max({ view_verts[0].y, view_verts[1].y, view_verts[2].y });
+		bool culled = false;
+		if (func::getDist(cam.rightNormal, cam.camPos, triangle.verts[0]) < 0 &&
+			func::getDist(cam.rightNormal, cam.camPos, triangle.verts[1]) < 0 &&
+			func::getDist(cam.rightNormal, cam.camPos, triangle.verts[2]) < 0)
+			culled = true;
+		if (func::getDist(cam.leftNormal, cam.camPos, triangle.verts[0]) < 0 &&
+			func::getDist(cam.leftNormal, cam.camPos, triangle.verts[1]) < 0 &&
+			func::getDist(cam.leftNormal, cam.camPos, triangle.verts[2]) < 0)
+			culled = true;
+		if (func::getDist(cam.topNormal, cam.camPos, triangle.verts[0]) < 0 &&
+			func::getDist(cam.topNormal, cam.camPos, triangle.verts[1]) < 0 &&
+			func::getDist(cam.topNormal, cam.camPos, triangle.verts[2]) < 0)
+			culled = true;
+		if (func::getDist(cam.botNormal, cam.camPos, triangle.verts[0]) < 0 &&
+			func::getDist(cam.botNormal, cam.camPos, triangle.verts[1]) < 0 &&
+			func::getDist(cam.botNormal, cam.camPos, triangle.verts[2]) < 0)
+			culled = true;
 
 		//if (bLeft < rasterizer.w_width && bRight > -rasterizer.w_width && bTop < rasterizer.w_height && bBot > -rasterizer.w_height)
-		rasterizer.clip_triangle_near(triangle, view_verts, out);
-		//out.push_back(triangle);
-	}
+		if (!culled)
+		{
+			rasterizer.clip_triangle_near(triangle, view_verts, out);
+		}
+	//}
 
 }
 void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Rasterizer& rasterizer, sf::Uint8*& buffer)
@@ -78,7 +92,7 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 		int bRight = std::min(tile.bRight, std::max(triangle.bRight, tile.bLeft));
 		int bBot = std::min(tile.bBot, std::max(triangle.bBot, tile.bTop));
 
-		float area = func::edge_f(sf::Vector2f(triangle.projVerts[0].x, triangle.projVerts[0].y), triangle.projVerts[1], triangle.projVerts[2]);
+		float area = func::edge_f(vec2(triangle.projVerts[0].x, triangle.projVerts[0].y), triangle.projVerts[1], triangle.projVerts[2]);
 
 		float a0 = (triangle.projVerts[2].y - triangle.projVerts[1].y), b0 = (triangle.projVerts[1].x - triangle.projVerts[2].x);
 		float a1 = (triangle.projVerts[0].y - triangle.projVerts[2].y), b1 = (triangle.projVerts[2].x - triangle.projVerts[0].x);
@@ -92,7 +106,7 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 		float incA1 = a1 * 8;
 		float incA2 = a2 * 8;
 
-		sf::Vector2f pixel(std::max(bLeft, 0) + .5, std::max(0, bTop) + .5);
+		vec2 pixel(std::max(bLeft, 0) + .5, std::max(0, bTop) + .5);
 		float w0r = func::edge_f(pixel, triangle.projVerts[1], triangle.projVerts[2]);
 		float w1r = func::edge_f(pixel, triangle.projVerts[2], triangle.projVerts[0]);
 		float w2r = func::edge_f(pixel, triangle.projVerts[0], triangle.projVerts[1]);
@@ -122,7 +136,7 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 							b1t * vb +
 							b2t * vc;
 
-						sf::Vector2f texel;
+						vec2 texel;
 
 						float inv_z = 1 / z;
 						int zindex = k + j;
@@ -158,14 +172,18 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 
 
 							int index2 = (floor(texel.x) + floor(texel.y) * tWidth) * 4;
-							if (triangleTexture[index2 + 3] > 0)
-							{
+							//if (triangleTexture[index2 + 3] > 0)
+							//{
 								z_buffer[zindex][i] = inv_z;
-								buffer[index] = triangleTexture[index2];
-								buffer[index + 1] = triangleTexture[index2 + 1];
-								buffer[index + 2] = triangleTexture[index2 + 2];
-								buffer[index + 3] = triangleTexture[index2 + 3];
-							}
+							//	buffer[index] = triangleTexture[index2];
+							//	buffer[index + 1] = triangleTexture[index2 + 1];
+							//	buffer[index + 2] = triangleTexture[index2 + 2];
+							//	buffer[index + 3] = triangleTexture[index2 + 3];
+							//}
+								buffer[index] = b0t * 255;
+								buffer[index + 1] = b1t * 255;
+								buffer[index + 2] = b2t * 255;
+								buffer[index + 3] = 255;
 
 
 						}
@@ -215,9 +233,7 @@ int main()
 
 	bool camera_rotating_right = false, camera_rotating_left = false, camera_rotating_up = false, camera_rotating_down = false;
 	bool camera_pan_forward = false, camera_pan_backwards = false, camera_pan_left = false, camera_pan_right = false;
-	Camera cam;
-	cam.setPanSpeed(5);
-	cam.setRotationSpeed(1);
+	Camera cam(1, 5);
 
 	int bufferSize = rasterizer.w_width * rasterizer.w_height * 4;
 
@@ -225,8 +241,20 @@ int main()
 	int ft = 0;
 	int numTiles = 8;
 
+	//scene.sceneData.clear();
+	//scene.sceneData.push_back(Triangle(vec4(0, 0, 6), vec4(3, 0, 6), vec4(3, 3, 6), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
+	//scene.sceneData.push_back(Triangle(vec4(0, 0, 6.1), vec4(3, 0, 6.1), vec4(3, 3, 6.1), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
+	//scene.sceneData.push_back(Triangle(vec4(0, 0, 9), vec4(3, 0, 9), vec4(3, 3, 9), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
+//	scene.sceneData.push_back(Triangle(
+	//	vec4(768.7572632, -951.802124, -388.7526855),
+	//	vec4(-4.090055466, 3.133419514, 7.654283524),
+	//	vec4(1255.310913, 87.79586792, -262.9161377), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
+
+
+	//scene.sceneData.push_back(Triangle(vec4(577.3502808, -577.3502808, 1000), vec4(0.05773502588, -0.05773502588, 0.1000000015), vec4(577.3502808, 577.3502808, 1000), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
 	while (window.isOpen())
 	{
+		clock_t total = std::clock();
 		//DECLARE/RESET our buffers
 		sf::Uint8* buffer = new sf::Uint8[bufferSize];
 		std::vector<std::vector<float>> z_buffer((float)rasterizer.w_width, std::vector<float>(rasterizer.w_height, FLT_MAX));
@@ -266,12 +294,14 @@ int main()
 
 		//Update camera position(this sets a matrix in cam.camMatrix we can use to multiply our objects against later)
 		cam.updateCamera(camera_rotating_left, camera_rotating_right, camera_rotating_up, camera_rotating_down,
-			camera_pan_forward, camera_pan_backwards, camera_pan_left, camera_pan_right);
+			camera_pan_forward, camera_pan_backwards, camera_pan_left, camera_pan_right, rasterizer);
 
 		std::vector<std::vector<Triangle>> triangleLists(11, std::vector<Triangle>());
+		std::vector<std::vector<Triangle>> rasterLists(11, std::vector<Triangle>());
 
 
-
+		std::clock_t t;
+		t = std::clock();
 		{
 			int increment = scene.sceneData.size() / 11;
 			int start = 0;
@@ -280,24 +310,38 @@ int main()
 			while (i < 10)
 			{
 				//toViewSpace(start, end, scene.sceneData, cam.camMatrix, rasterizer, triangleLists[i]);
-				g.run([&, start, end, i] {toViewSpace(start, end, scene.sceneData, cam.camMatrix, rasterizer, triangleLists[i]); });
+				g.run([&, start, end, i] 
+				{
+					for (int j = start; j < end; ++j) 
+					{
+						Triangle triangle = scene.sceneData[j];
+						toViewSpace(rasterizer, triangleLists[i], cam, triangle);
+					}
+				});
 				start = end;
 				end = start + increment;
 				i++;
 			}
-			//g.run([&, start, i] {toViewSpace(start, scene.sceneData.size(), scene.sceneData, cam.camMatrix, rasterizer, triangleLists[i]); });
+			//g.run([&, start, i] {toViewSpace(start, scene.sceneData.size(), scene.sceneData, cam.camMatrix, rasterizer, triangleLists[i], cam); });
+			g.run([&, start, i]
+			{
+				for (int j = start; j < scene.sceneData.size(); ++j)
+				{
+					Triangle triangle = scene.sceneData[j];
+					toViewSpace(rasterizer, triangleLists[i], cam, triangle);
+				}
+			});
 			g.wait();
 		}
-
-
-
+		t = std::clock() - t;
+		std::cout << "viewspace and clipping: " << (float)t / CLOCKS_PER_SEC << " seconds" << std::endl;
 
 		int tileLengthHorizontal = rasterizer.w_width / numTiles;
 		int tileLengthVertical = rasterizer.w_height / numTiles;
 
 		std::vector<std::vector<Tile>> tiles(numTiles, std::vector<Tile>(numTiles));
 
-
+		t = std::clock();
 		for (int i = 0; i < numTiles; ++i)
 		{
 			for (int j = 0; j < numTiles; ++j)
@@ -310,35 +354,53 @@ int main()
 				tiles[i][j] = tile;
 			}
 		}
+		t = std::clock() - t;
+		std::cout << "tile setup: " << (float)t / CLOCKS_PER_SEC << " seconds" << std::endl;
+
+		t = std::clock();
+		//std::vector<Triangle> rasterList;
+		for (int i = 0; i < triangleLists.size(); ++i)
+		{
+			//for (auto& tri : list)
+			//{
+			//	rasterizer.project_triangle(tri, rasterizer.p_mat, rasterLists[i]);
+			//}
+			g.run([&, i] {foobar(triangleLists[i], rasterizer, rasterLists[i]); });
+		}
+		g.wait();
+		t = std::clock() - t;
+		std::cout << "projection: " << (float)t / CLOCKS_PER_SEC << " seconds" << std::endl;
 
 
+		t = std::clock();
 
-		for (auto& list : triangleLists)
+
+		for (auto& list : rasterLists)
 		{
 			for (auto& tri : list)
 			{
-				if (rasterizer.project_triangle(tri, rasterizer.p_mat))
+				tri.bLeft = std::min({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
+				tri.bTop = std::min({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
+				tri.bRight = std::max({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
+				tri.bBot = std::max({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
+
+
+				for (auto& col : tiles)
 				{
-
-					tri.bLeft = std::min({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
-					tri.bTop = std::min({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
-					tri.bRight = std::max({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
-					tri.bBot = std::max({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
-
-					for (auto& col : tiles)
+					for (auto& tile : col)
 					{
-						for (auto& tile : col)
+						if (tri.bLeft < tile.bRight && tri.bRight > tile.bLeft && tri.bTop < tile.bBot && tri.bBot > tile.bTop)
 						{
-							if (tri.bLeft < tile.bRight && tri.bRight > tile.bLeft && tri.bTop < tile.bBot && tri.bBot > tile.bTop)
-							{
-								tile.trianglesToRender.push_back(tri);
-							}
+							tile.trianglesToRender.push_back(tri);
 						}
 					}
 				}
 			}
 		}
+		t = std::clock() - t;
+		std::cout << "binning: " << (float)t / CLOCKS_PER_SEC << " seconds" << std::endl;
 
+		t = std::clock();
 		for (auto& row : tiles)
 		{
 			for (auto& tile : row)
@@ -346,7 +408,8 @@ int main()
 		}
 
 		g.wait();
-
+		t = std::clock() - t;
+		std::cout << "rasterization: " << (float)t / CLOCKS_PER_SEC << " seconds" << std::endl;
 
 
 		int numTrisBeingDrawn = 0;
@@ -382,7 +445,9 @@ int main()
 
 		window.display();
 		//system("Pause");
-		ft++;
+		total = std::clock() - total;
+		std::cout << "total: " << (float)total / CLOCKS_PER_SEC << " seconds" << std::endl;
+
 	}
 	return 0;
 }

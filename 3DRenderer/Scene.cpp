@@ -14,8 +14,8 @@ bool Scene::loadScene(const std::string& fileName)
 		return false;
 
 	//we insert empty element into vector because the index for our vertices and textureCoords starts at 1
-	std::vector<sf::Vector3f> vertices = { sf::Vector3f(0, 0, 0) };
-	std::vector<sf::Vector2f> textureCoords = { sf::Vector2f(0, 0) };
+	std::vector<vec4> vertices = { vec4(0, 0, 0) };
+	std::vector<vec2> textureCoords = { vec2(0, 0) };
 	std::string line;
 	std::string firstToken;
 	std::string curMaterial;
@@ -37,7 +37,7 @@ bool Scene::loadScene(const std::string& fileName)
 			float vx, vy, vz;
 
 			iss >> vx >> vy >> vz;
-			vertices.push_back(sf::Vector3f(vx, vy, vz));
+			vertices.push_back(vec4(vx, vy, vz));
 		}
 		else if (firstToken == "usemtl")
 		{
@@ -59,7 +59,7 @@ bool Scene::loadScene(const std::string& fileName)
 			//if (vt1 > 1)
 			//	vt1 = 1;
 
-			textureCoords.push_back(sf::Vector2f(vt0, vt1));
+			textureCoords.push_back(vec2(vt0, vt1));
 
 		}
 		else if (firstToken == "f")
@@ -90,6 +90,7 @@ bool Scene::loadScene(const std::string& fileName)
 				iss.ignore(line.size(), '/');
 				iss >> t2;
 			}
+
 			sceneData.push_back(Triangle(vertices[v0], vertices[v1], vertices[v2], textureCoords[t0], textureCoords[t1], textureCoords[t2], curMaterial));
 		}
 

@@ -10,7 +10,8 @@ class Rasterizer
 public:
 	int w_width, w_height;
 	float c_near, c_far;
-	float c_width, c_height;
+	float nWidth, nHeight;
+	float fWidth, fHeight;
 	float c_top, c_right, c_bot, c_left;
 
 	int fov;
@@ -20,9 +21,7 @@ public:
 
 
 	Rasterizer(int _w_width, int _w_height, float _c_near, float _c_far, int fov);
-	bool project_triangle(Triangle& tri, float mat[4][4]);
-	void rot_x(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3]);
-	void rot_y(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3]);
-	void rot_z(Triangle& tri, float degrees, sf::Vector3f(&trans_verts)[3]);
-	int clip_triangle_near(const Triangle& tri, sf::Vector3f(&proj_verts)[3], std::vector<Triangle>& out) const;
+	bool project_triangle(Triangle& tri, float mat[4][4], std::vector<Triangle>& out);
+	//int clip_triangle_near(const Triangle& tri, vec4(&proj_verts)[3], std::vector<Triangle>& out) const;
+	int clip_triangle_near(const Triangle& tri, vec4(&proj_verts)[3], std::vector<Triangle>& out) const;
 };
