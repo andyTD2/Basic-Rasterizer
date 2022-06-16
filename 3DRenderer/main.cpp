@@ -25,24 +25,19 @@ struct Tile
 
 };
 
-void foobar(std::vector<Triangle*>& list, Rasterizer& rasterizer, std::vector<Triangle*>& out)
+void foobar(std::vector<Triangle*>& list, Rasterizer& rasterizer)
 {
 	for (auto& tri : list)
 	{
-		rasterizer.project_triangle(*tri, rasterizer.p_mat, out);
+		rasterizer.project_triangle(*tri, rasterizer.p_mat);
 	}
 }
-void toViewSpace(const Rasterizer& rasterizer, std::vector<Triangle*>& out, const Camera& cam, Triangle& triangle)
+void toViewSpace(const Rasterizer& rasterizer, std::vector<Triangle*>& out, const Camera& cam, Triangle& triangle, std::vector<Triangle*>& trisToDelete)
 {
 //
 	//for (int i = start; i < end; ++i)
 	//{
 		//Triangle triangle = sceneData[i];
-		vec4 view_verts[3];
-
-		func::vecXmatrix(triangle.verts[0], cam.camMatrix, view_verts[0], false);
-		func::vecXmatrix(triangle.verts[1], cam.camMatrix, view_verts[1], false);
-		func::vecXmatrix(triangle.verts[2], cam.camMatrix, view_verts[2], false);
 
 		bool culled = false;
 		if (func::getDist(cam.rightNormal, cam.camPos, triangle.verts[0]) < 0 &&
@@ -62,10 +57,14 @@ void toViewSpace(const Rasterizer& rasterizer, std::vector<Triangle*>& out, cons
 			func::getDist(cam.botNormal, cam.camPos, triangle.verts[2]) < 0)
 			culled = true;
 
+
 		//if (bLeft < rasterizer.w_width && bRight > -rasterizer.w_width && bTop < rasterizer.w_height && bBot > -rasterizer.w_height)
 		if (!culled)
 		{
-			rasterizer.clip_triangle_near(triangle, view_verts, out);
+			func::vecXmatrix(triangle.verts[0], cam.camMatrix, triangle.transVerts[0], false);
+			func::vecXmatrix(triangle.verts[1], cam.camMatrix, triangle.transVerts[1], false);
+			func::vecXmatrix(triangle.verts[2], cam.camMatrix, triangle.transVerts[2], false);
+			rasterizer.clip_triangle_near(triangle, out, trisToDelete);
 		}
 	//}
 
@@ -74,26 +73,10 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 {
 	for (auto& triangle : tile.trianglesToRender)
 	{
-		float va = 1 / triangle->verts[0].z;
-		float vb = 1 / triangle->verts[1].z;
-		float vc = 1 / triangle->verts[2].z;
-
-		sf::Uint8* triangleTexture = scene.textureData.find(triangle->associatedMtl)->second;
-		int tWidth = scene.widthMap.find(triangle->associatedMtl)->second;
-		int tHeight = scene.heightMap.find(triangle->associatedMtl)->second;
-
-		float* tx = new float[3];
-		float* ty = new float[3];
-		tx[0] = triangle->tCoords[0].x / triangle->verts[0].z; tx[1] = triangle->tCoords[1].x / triangle->verts[1].z; tx[2] = triangle->tCoords[2].x / triangle->verts[2].z;
-		ty[0] = triangle->tCoords[0].y / triangle->verts[0].z; ty[1] = triangle->tCoords[1].y / triangle->verts[1].z; ty[2] = triangle->tCoords[2].y / triangle->verts[2].z;
-
-
 		int bLeft = std::max(tile.bLeft, std::min(triangle->bLeft, tile.bRight));
 		int bTop = std::max(tile.bTop, std::min(triangle->bTop, tile.bBot));
 		int bRight = std::min(tile.bRight, std::max(triangle->bRight, tile.bLeft));
 		int bBot = std::min(tile.bBot, std::max(triangle->bBot, tile.bTop));
-
-		float area = func::edge_f(vec2(triangle->projVerts[0].x, triangle->projVerts[0].y), triangle->projVerts[1], triangle->projVerts[2]);
 
 		float a0 = (triangle->projVerts[2].y - triangle->projVerts[1].y), b0 = (triangle->projVerts[1].x - triangle->projVerts[2].x);
 		float a1 = (triangle->projVerts[0].y - triangle->projVerts[2].y), b1 = (triangle->projVerts[2].x - triangle->projVerts[0].x);
@@ -107,7 +90,7 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 		float incA1 = a1 * 8;
 		float incA2 = a2 * 8;
 
-		vec2 pixel(std::max(bLeft, 0) + .5, std::max(0, bTop) + .5);
+		vec2 pixel(std::max(bLeft, 0), std::max(0, bTop));
 		float w0r = func::edge_f(pixel, triangle->projVerts[1], triangle->projVerts[2]);
 		float w1r = func::edge_f(pixel, triangle->projVerts[2], triangle->projVerts[0]);
 		float w2r = func::edge_f(pixel, triangle->projVerts[0], triangle->projVerts[1]);
@@ -129,13 +112,13 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 					if ((one[k] <= 0 && two[k] <= 0 && three[k] <= 0) || (one[k] >= 0 && two[k] >= 0 && three[k] >= 0))
 						//if ((one[k] <= 0 && two[k] <= 0 && three[k] <= 0))
 					{
-						float b0t = one[k] / (area);
-						float b1t = two[k] / (area);
-						float b2t = three[k] / (area);
+						float b0t = one[k] / (triangle->area);
+						float b1t = two[k] / (triangle->area);
+						float b2t = three[k] / (triangle->area);
 
-						float z = b0t * va +
-							b1t * vb +
-							b2t * vc;
+						float z = b0t * triangle->vertexDepth[0] +
+							b1t * triangle->vertexDepth[1] +
+							b2t * triangle->vertexDepth[2];
 
 						vec2 texel;
 
@@ -145,21 +128,17 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 						{
 							int index = (zindex + i * rasterizer.w_width) * 4;
 
-							float w = (va * b0t) +
-								(vb * b1t) +
-								(vc * b2t);
+							float u = (triangle->tx[0] * b0t) +
+								(triangle->tx[1] * b1t) +
+								(triangle->tx[2] * b2t);
 
-							float u = (tx[0] * b0t) +
-								(tx[1] * b1t) +
-								(tx[2] * b2t);
-
-							float v = (ty[0] * b0t) +
-								(ty[1] * b1t) +
-								(ty[2] * b2t);
+							float v = (triangle->ty[0] * b0t) +
+								(triangle->ty[1] * b1t) +
+								(triangle->ty[2] * b2t);
 
 
-							texel.x = u / w;
-							texel.y = v / w;
+							texel.x = u / z;
+							texel.y = v / z;
 
 
 							if (texel.x < 0 || texel.x > 0)
@@ -167,19 +146,19 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 							if (texel.y < 0 || texel.y > 0)
 								texel.y = texel.y - floor(texel.y);
 
-							texel.x *= (tWidth - 1);
-							texel.y *= (tHeight - 1);
+							texel.x *= (triangle->tWidth - 1);
+							texel.y *= (triangle->tHeight - 1);
 
 
 
-							int index2 = (floor(texel.x) + floor(texel.y) * tWidth) * 4;
-							if (triangleTexture[index2 + 3] > 0)
+							int index2 = (floor(texel.x) + floor(texel.y) * triangle->tWidth) * 4;
+							if (triangle->triangleTexture[index2 + 3] > 0)
 							{
 								z_buffer[zindex][i] = inv_z;
-								buffer[index] = triangleTexture[index2];
-								buffer[index + 1] = triangleTexture[index2 + 1];
-								buffer[index + 2] = triangleTexture[index2 + 2];
-								buffer[index + 3] = triangleTexture[index2 + 3];
+								buffer[index] = triangle->triangleTexture[index2];
+								buffer[index + 1] = triangle->triangleTexture[index2 + 1];
+								buffer[index + 2] = triangle->triangleTexture[index2 + 2];
+								buffer[index + 3] = triangle->triangleTexture[index2 + 3];
 							}
 
 
@@ -197,9 +176,6 @@ void bar(Tile& tile, Scene& scene, std::vector<std::vector<float>>& z_buffer, Ra
 			w2r += b2;
 
 		}
-
-		delete[]tx;
-		delete[]ty;
 	}
 }
 
@@ -238,17 +214,6 @@ int main()
 	int ft = 0;
 	int numTiles = 8;
 
-	//scene.sceneData.clear();
-	//scene.sceneData.push_back(Triangle(vec4(0, 0, 6), vec4(3, 0, 6), vec4(3, 3, 6), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
-	//scene.sceneData.push_back(Triangle(vec4(0, 0, 6.1), vec4(3, 0, 6.1), vec4(3, 3, 6.1), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
-	//scene.sceneData.push_back(Triangle(vec4(0, 0, 9), vec4(3, 0, 9), vec4(3, 3, 9), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
-//	scene.sceneData.push_back(Triangle(
-	//	vec4(768.7572632, -951.802124, -388.7526855),
-	//	vec4(-4.090055466, 3.133419514, 7.654283524),
-	//	vec4(1255.310913, 87.79586792, -262.9161377), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
-
-
-	//scene.sceneData.push_back(Triangle(vec4(577.3502808, -577.3502808, 1000), vec4(0.05773502588, -0.05773502588, 0.1000000015), vec4(577.3502808, 577.3502808, 1000), vec2(0, 0), vec2(0, 0), vec2(0, 0), "lion.tga"));
 	while (window.isOpen())
 	{
 		std::cout << scene.sceneData.size() << std::endl;
@@ -295,7 +260,7 @@ int main()
 			camera_pan_forward, camera_pan_backwards, camera_pan_left, camera_pan_right, rasterizer);
 
 		std::vector<std::vector<Triangle*>> triangleLists(11, std::vector<Triangle*>());
-		std::vector<std::vector<Triangle*>> rasterLists(11, std::vector<Triangle*>());
+		std::vector<std::vector<Triangle*>> trisToDelete(11, std::vector<Triangle*>());
 
 
 		std::clock_t t;
@@ -312,8 +277,12 @@ int main()
 				{
 					for (int j = start; j < end; ++j) 
 					{
-						Triangle triangle = scene.sceneData[j];
-						toViewSpace(rasterizer, triangleLists[i], cam, triangle);
+						if (!cam.checkIfTriangleCulled(scene.sceneData[j]))
+						{
+							cam.transformToViewSpace(scene.sceneData[j]);
+							rasterizer.clip_triangle_near(scene.sceneData[j], triangleLists[i], trisToDelete[i]);
+						}
+						//toViewSpace(rasterizer, triangleLists[i], cam, scene.sceneData[j], trisToDelete[i]);
 					}
 				});
 				start = end;
@@ -325,8 +294,11 @@ int main()
 			{
 				for (int j = start; j < scene.sceneData.size(); ++j)
 				{
-					Triangle triangle = scene.sceneData[j];
-					toViewSpace(rasterizer, triangleLists[i], cam, triangle);
+					if (!cam.checkIfTriangleCulled(scene.sceneData[j]))
+					{
+						cam.transformToViewSpace(scene.sceneData[j]);
+						rasterizer.clip_triangle_near(scene.sceneData[j], triangleLists[i], trisToDelete[i]);
+					}
 				}
 			});
 			g.wait();
@@ -359,7 +331,8 @@ int main()
 		//std::vector<Triangle> rasterList;
 		for (int i = 0; i < triangleLists.size(); ++i)
 		{
-			g.run([&, i] {foobar(triangleLists[i], rasterizer, rasterLists[i]); });
+			g.run([&, i] {foobar(triangleLists[i], rasterizer); });
+			//foobar(triangleLists[i], rasterizer, rasterLists[i]);
 		}
 		g.wait();
 
@@ -373,15 +346,35 @@ int main()
 
 		t = std::clock();
 
+		for (auto& list : triangleLists)
+		{
+			g.run([&] {
+				for (auto& tri : list)
+				{
+					tri->bLeft = std::max(0.0f, std::min({ tri->projVerts[0].x, tri->projVerts[1].x, tri->projVerts[2].x, (float)rasterizer.w_width - 1 }));
+					tri->bTop = std::max(0.0f, std::min({ tri->projVerts[0].y, tri->projVerts[1].y, tri->projVerts[2].y, (float)rasterizer.w_height - 1 }));
+					tri->bRight = std::min((float)rasterizer.w_width - 1, std::max({ tri->projVerts[0].x, tri->projVerts[1].x, tri->projVerts[2].x, 0.0f }));
+					tri->bBot = std::min((float)rasterizer.w_height - 1, std::max({ tri->projVerts[0].y, tri->projVerts[1].y, tri->projVerts[2].y, 0.0f }));
 
-		for (auto& list : rasterLists)
+					tri->vertexDepth[0] = 1 / tri->transVerts[0].z;
+					tri->vertexDepth[1] = 1 / tri->transVerts[1].z;
+					tri->vertexDepth[2] = 1 / tri->transVerts[2].z;
+
+					tri->triangleTexture = scene.textureData.find(tri->associatedMtl)->second;
+					tri->tWidth = scene.widthMap.find(tri->associatedMtl)->second;
+					tri->tHeight = scene.heightMap.find(tri->associatedMtl)->second;
+
+					tri->tx[0] = tri->tCoords[0].x / tri->transVerts[0].z; tri->tx[1] = tri->tCoords[1].x / tri->transVerts[1].z; tri->tx[2] = tri->tCoords[2].x / tri->transVerts[2].z;
+					tri->ty[0] = tri->tCoords[0].y / tri->transVerts[0].z; tri->ty[1] = tri->tCoords[1].y / tri->transVerts[1].z; tri->ty[2] = tri->tCoords[2].y / tri->transVerts[2].z;
+					tri->area = func::edge_f(vec2(tri->projVerts[0].x, tri->projVerts[0].y), tri->projVerts[1], tri->projVerts[2]);
+				}
+			});
+		}
+		g.wait();
+		for (auto& list : triangleLists)
 		{
 			for (auto& tri : list)
 			{
-				tri->bLeft = std::max(0.0f, std::min({ tri->projVerts[0].x, tri->projVerts[1].x, tri->projVerts[2].x, (float)rasterizer.w_width - 1 }));
-				tri->bTop = std::max(0.0f, std::min({ tri->projVerts[0].y, tri->projVerts[1].y, tri->projVerts[2].y, (float)rasterizer.w_height - 1 }));
-				tri->bRight = std::min((float)rasterizer.w_width - 1, std::max({ tri->projVerts[0].x, tri->projVerts[1].x, tri->projVerts[2].x, 0.0f }));
-				tri->bBot = std::min((float)rasterizer.w_height - 1, std::max({ tri->projVerts[0].y, tri->projVerts[1].y, tri->projVerts[2].y, 0.0f }));
 
 				int startCol = tri->bLeft / tileLengthHorizontal;
 				int endCol = tri->bRight / tileLengthHorizontal;
@@ -409,6 +402,7 @@ int main()
 		{
 			for (auto& tile : row)
 				g.run([&] {bar(tile, scene, z_buffer, rasterizer, buffer); });
+				//bar(tile, scene, z_buffer, rasterizer, buffer);
 		}
 
 		g.wait();
@@ -438,11 +432,13 @@ int main()
 		delete[] buffer;
 	
 		t = std::clock();
-		for (auto& list : triangleLists)
+		for (auto& list : trisToDelete)
 			for (auto& ptr : list)
 				delete ptr;
 		t = std::clock() - t;
 		std::cout << "deletion: " << (float)t / CLOCKS_PER_SEC << " seconds" << std::endl;
+
+		t = std::clock();
 		sf::Texture texture;
 		texture.loadFromImage(image);
 
@@ -455,7 +451,8 @@ int main()
 
 		window.display();
 		//system("Pause");
-
+		t = std::clock() - t;
+		std::cout << "display: " << (float)t / CLOCKS_PER_SEC << " seconds" << std::endl;
 		
 		total = std::clock() - total;
 		std::cout << "total: " << (float)total / CLOCKS_PER_SEC << " seconds" << std::endl;

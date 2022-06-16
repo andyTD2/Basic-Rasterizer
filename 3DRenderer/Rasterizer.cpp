@@ -48,12 +48,11 @@ Rasterizer::Rasterizer(int _w_width, int _w_height, float _c_near, float _c_far,
 
 }
 
-bool Rasterizer::project_triangle(Triangle& tri, float mat[4][4], std::vector<Triangle*>& out)
+bool Rasterizer::project_triangle(Triangle& tri, float mat[4][4])
 {
-
-	func::vecXmatrix(tri.verts[0], mat, tri.projVerts[0], true);
-	func::vecXmatrix(tri.verts[1], mat, tri.projVerts[1], true);
-	func::vecXmatrix(tri.verts[2], mat, tri.projVerts[2], true);
+	func::vecXmatrix(tri.transVerts[0], mat, tri.projVerts[0], true);
+	func::vecXmatrix(tri.transVerts[1], mat, tri.projVerts[1], true);
+	func::vecXmatrix(tri.transVerts[2], mat, tri.projVerts[2], true);
 
 
 	//if (tri.projVerts[0].x > tri.projVerts[0].w && tri.projVerts[1].x > tri.projVerts[1].w && tri.projVerts[2].x > tri.projVerts[2].w)
@@ -76,20 +75,19 @@ bool Rasterizer::project_triangle(Triangle& tri, float mat[4][4], std::vector<Tr
 	tri.bTop = std::min({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
 	tri.bRight = std::max({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
 	tri.bBot = std::max({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
-	out.push_back(&tri);
+	//out.push_back(&tri);
 	return true;
 }
 
 
-int Rasterizer::clip_triangle_near(const Triangle& tri, vec4(&proj_verts)[3], std::vector<Triangle*>& out) const
+int Rasterizer::clip_triangle_near(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete) const
 {
-	if (proj_verts[0].z >= c_near && proj_verts[1].z >= c_near && proj_verts[2].z >= c_near)
+	if (tri.transVerts[0].z >= c_near && tri.transVerts[1].z >= c_near && tri.transVerts[2].z >= c_near)
 	{
-
-		out.push_back(new Triangle(proj_verts[0], proj_verts[1], proj_verts[2], tri.tCoords[0], tri.tCoords[1], tri.tCoords[2], tri.associatedMtl));
+		outputTris.push_back(&tri);
 		return 1;
 	}
-	else if (proj_verts[0].z < c_near && proj_verts[1].z < c_near && proj_verts[2].z < c_near)
+	else if (tri.transVerts[0].z < c_near && tri.transVerts[1].z < c_near && tri.transVerts[2].z < c_near)
 	{
 		return 0;
 	}
@@ -101,14 +99,14 @@ int Rasterizer::clip_triangle_near(const Triangle& tri, vec4(&proj_verts)[3], st
 
 	for (int i = 0; i < 3; ++i)
 	{
-		if (proj_verts[i].z < c_near)
+		if (tri.transVerts[i].z < c_near)
 		{
-			clippedVertices.push_back(proj_verts[i]);
+			clippedVertices.push_back(tri.transVerts[i]);
 			clippedTVertices.push_back(tri.tCoords[i]);
 		}
 		else
 		{
-			safeVertices.push_back(proj_verts[i]);
+			safeVertices.push_back(tri.transVerts[i]);
 			safeTVertices.push_back(tri.tCoords[i]);
 		}
 	}
@@ -127,8 +125,12 @@ int Rasterizer::clip_triangle_near(const Triangle& tri, vec4(&proj_verts)[3], st
 		newT2.x = safeTVertices[0].x + (t * (clippedTVertices[1].x - safeTVertices[0].x));
 		newT2.y = safeTVertices[0].y + (t * (clippedTVertices[1].y - safeTVertices[0].y));
 
-
-		out.push_back(new Triangle(one, two, safeVertices[0], newT1, newT2, safeTVertices[0], tri.associatedMtl));
+		Triangle *clippedTri = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, newT2, safeTVertices[0], tri.associatedMtl);
+		clippedTri->transVerts[0] = one;
+		clippedTri->transVerts[1] = two;
+		clippedTri->transVerts[2] = safeVertices[0];
+		outputTris.push_back(clippedTri);
+		trisToDelete.push_back(clippedTri);
 		return 1;
 	}
 
@@ -145,9 +147,18 @@ int Rasterizer::clip_triangle_near(const Triangle& tri, vec4(&proj_verts)[3], st
 		newT2.x = safeTVertices[1].x + (t * (clippedTVertices[0].x - safeTVertices[1].x));
 		newT2.y = safeTVertices[1].y + (t * (clippedTVertices[0].y - safeTVertices[1].y));
 
-
-		out.push_back(new Triangle(one, two, safeVertices[1], newT1, newT2, safeTVertices[1], tri.associatedMtl));
-		out.push_back(new Triangle(one, safeVertices[0], safeVertices[1], newT1, safeTVertices[0], safeTVertices[1], tri.associatedMtl));
+		Triangle *clippedTri = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, newT2, safeTVertices[1], tri.associatedMtl);
+		clippedTri->transVerts[0] = one;
+		clippedTri->transVerts[1] = two;
+		clippedTri->transVerts[2] = safeVertices[1];
+		Triangle *clippedTri2 = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, safeTVertices[0], safeTVertices[1], tri.associatedMtl);
+		clippedTri2->transVerts[0] = one;
+		clippedTri2->transVerts[1] = safeVertices[0];
+		clippedTri2->transVerts[2] = safeVertices[1];
+		outputTris.push_back(clippedTri);
+		outputTris.push_back(clippedTri2);
+		trisToDelete.push_back(clippedTri);
+		trisToDelete.push_back(clippedTri2);
 
 		return 2;
 	}

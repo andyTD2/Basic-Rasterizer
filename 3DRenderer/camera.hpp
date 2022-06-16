@@ -13,6 +13,10 @@ public:
 
 	void setRotationSpeed(float newSpeed);
 	void setPanSpeed(float newSpeed);
+	bool checkIfTriangleCulled(const Triangle& triangle) const;
+	void transformToViewSpace(Triangle& triangle) const;
+
+
 	float camMatrix[4][4];
 	vec4 camPos;
 	vec4 lookDir;

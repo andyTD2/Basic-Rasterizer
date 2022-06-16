@@ -7,7 +7,16 @@
 
 struct Triangle
 {
+	float vertexDepth[3];
+	sf::Uint8* triangleTexture;
+	int tWidth;
+	int tHeight;
+	float ty[3];
+	float tx[3];
+	float area;
+
 	vec4 verts[3];
+	vec4 transVerts[3];
 	vec4 projVerts[3];
 	vec2 tCoords[3];
 	std::string associatedMtl;

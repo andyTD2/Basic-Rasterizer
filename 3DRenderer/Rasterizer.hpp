@@ -21,7 +21,7 @@ public:
 
 
 	Rasterizer(int _w_width, int _w_height, float _c_near, float _c_far, int fov);
-	bool project_triangle(Triangle& tri, float mat[4][4], std::vector<Triangle*>& out);
+	bool project_triangle(Triangle& tri, float mat[4][4]);
 	//int clip_triangle_near(const Triangle& tri, vec4(&proj_verts)[3], std::vector<Triangle>& out) const;
-	int clip_triangle_near(const Triangle& tri, vec4(&proj_verts)[3], std::vector<Triangle*>& out) const;
+	int clip_triangle_near(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete) const;
 };

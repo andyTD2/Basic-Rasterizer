@@ -128,3 +128,33 @@ void Camera::setPanSpeed(float newSpeed)
 {
 	panSpeed = newSpeed;
 }
+
+bool Camera::checkIfTriangleCulled(const Triangle& triangle) const
+{
+	bool culled = false;
+	if (func::getDist(rightNormal, camPos, triangle.verts[0]) < 0 &&
+		func::getDist(rightNormal, camPos, triangle.verts[1]) < 0 &&
+		func::getDist(rightNormal, camPos, triangle.verts[2]) < 0)
+		culled = true;
+	if (func::getDist(leftNormal, camPos, triangle.verts[0]) < 0 &&
+		func::getDist(leftNormal, camPos, triangle.verts[1]) < 0 &&
+		func::getDist(leftNormal, camPos, triangle.verts[2]) < 0)
+		culled = true;
+	if (func::getDist(topNormal, camPos, triangle.verts[0]) < 0 &&
+		func::getDist(topNormal, camPos, triangle.verts[1]) < 0 &&
+		func::getDist(topNormal, camPos, triangle.verts[2]) < 0)
+		culled = true;
+	if (func::getDist(botNormal, camPos, triangle.verts[0]) < 0 &&
+		func::getDist(botNormal, camPos, triangle.verts[1]) < 0 &&
+		func::getDist(botNormal, camPos, triangle.verts[2]) < 0)
+		culled = true;
+
+	return culled;
+}
+
+void Camera::transformToViewSpace(Triangle& triangle) const
+{
+	func::vecXmatrix(triangle.verts[0], camMatrix, triangle.transVerts[0], false);
+	func::vecXmatrix(triangle.verts[1], camMatrix, triangle.transVerts[1], false);
+	func::vecXmatrix(triangle.verts[2], camMatrix, triangle.transVerts[2], false);
+}
