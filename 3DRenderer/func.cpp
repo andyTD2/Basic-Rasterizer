@@ -34,7 +34,7 @@ float func::vecXmatrix(const vec4& vec, const float matrix[4][4], vec4& result, 
 	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y),
 		_mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
 
-	__m128 multiplyZs = _mm_mul_ps(_mm_setr_ps(vec.z, vec.z, vec.z, vec.z), _mm_setr_ps(matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]));
+	__m128 multiplyZs = _mm_mul_ps(_mm_set1_ps(vec.z), _mm_setr_ps(matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]));
 
 	__m256 snd = _mm256_castps128_ps256(multiplyZs);
 	snd = _mm256_insertf128_ps(snd, _mm_setr_ps(matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]), 1);
