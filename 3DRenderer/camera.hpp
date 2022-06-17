@@ -15,6 +15,7 @@ public:
 	void setPanSpeed(float newSpeed);
 	bool checkIfTriangleCulled(const Triangle& triangle) const;
 	void transformToViewSpace(Triangle& triangle) const;
+	int clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete, float nearPlaneDepth) const;
 
 
 	float camMatrix[4][4];

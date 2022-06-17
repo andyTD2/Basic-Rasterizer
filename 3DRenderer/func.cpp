@@ -17,20 +17,6 @@ vec4 func::getIntersection(vec4 plane_point, vec4 plane_normal, vec4 p0, vec4 p1
 
 float func::vecXmatrix(const vec4& vec, const float matrix[4][4], vec4& result, bool project)
 {
-	//result.x = vec.x * matrix[0][0] + vec.y * matrix[1][0] + vec.z * matrix[2][0] + matrix[3][0];
-	//result.y = vec.x * matrix[0][1] + vec.y * matrix[1][1] + vec.z * matrix[2][1] + matrix[3][1];
-	//result.z = vec.x * matrix[0][2] + vec.y * matrix[1][2] + vec.z * matrix[2][2] + matrix[3][2];
-	//result.w = vec.x * matrix[0][3] + vec.y * matrix[1][3] + vec.z * matrix[2][3] + matrix[3][3];
-
-	//if (w != 1)
-	//{
-	//	result.x /= w;
-	//	result.y /= w;
-	//	result.z /= w;
-	//}
-	
-
-	
 	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y),
 		_mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
 
@@ -63,19 +49,7 @@ float func::vecXmatrix(const vec4& vec, const float matrix[4][4], vec4& result, 
 
 float func::edge_f(const vec2& pixel, const vec4& v0, const vec4& v1)
 {
-
-	//std::cout << "pixel.x: " << pixel.x << ", " << pixel.y << std::endl;
-	//func::print(v0);
-	//func::print(v1);
-
-	//int temp = ((v1.y - v0.y) * pixel.x) + ((v0.x - v1.x) * pixel.y) + ((v0.y * v1.x) - (v0.x * v1.y));
-	//int temp = ((v0.y - v1.y) * pixel.x) + ((v1.x - v0.x) * pixel.y) + ((v0.x * v1.y) - (v0.y * v1.x));
-	//std::cout << "NEW: " << temp << std::endl;
-
-	//OLD
-	//int temp = ((pixel.x - v0.x) * (v1.y - v0.y)) - ((pixel.y - v0.y) * (v1.x - v0.x));
-	double temp = (pixel.x - v0.x) * (v1.y - v0.y) - (pixel.y - v0.y) * (v1.x - v0.x);
-	return temp;
+	return (pixel.x - v0.x) * (v1.y - v0.y) - (pixel.y - v0.y) * (v1.x - v0.x);
 }
 
 void func::matrixXmatrix(const float left_mat[4][4], const float right_mat[4][4], float(&res)[4][4])

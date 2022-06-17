@@ -3,47 +3,39 @@
 
 
 
-Rasterizer::Rasterizer(int _w_width, int _w_height, float _c_near, float _c_far, int _fov) :
-	w_width(_w_width), w_height(_w_height), c_near(_c_near), c_far(_c_far), fov(_fov)
+Rasterizer::Rasterizer(int newWWidth, int newWHeight, float newCNear, float newCFar, int newFov) :
+	wWidth(newWWidth), wHeight(newWHeight), cNear(newCNear), cFar(newCFar), fov(newFov)
 {
 	const float pi = 3.141592653;
-	aspect_ratio = w_width / w_height;
+	aspectRatio = wWidth / wHeight;
 
 	//canvas size and dimensions
-	nWidth = tan((fov / 2) * pi / 180) * c_near * 2;
+	nWidth = tan((fov / 2) * pi / 180) * cNear * 2;
 	nHeight = nWidth;
-	fWidth = tan((fov / 2) * pi / 180) * c_far * 2;
+	fWidth = tan((fov / 2) * pi / 180) * cFar * 2;
 	fHeight = fWidth;
 
-	c_top = nHeight / 2;
-	c_right = nWidth / 2;
-	c_bot = -c_top;
-	c_left = -c_right;
+	cTop = nHeight / 2;
+	cRight = nWidth / 2;
+	cBot = -cTop;
+	cLeft = -cRight;
 
 	for (int i = 0; i < 4; ++i)
 	{
 		for (int j = 0; j < 4; ++j)
 		{
-			p_mat[i][j] = 0;
+			pMat[i][j] = 0;
 		}
 	}
 
-	//projection matrix
-	//p_mat[0][0] = aspect_ratio * 1.0 / tan(fov * 0.5f / 180.0f * 3.14159f);
-	//p_mat[1][1] = 1.0 / tan(fov * 0.5f / 180.0f * 3.14159f);
-	//p_mat[2][2] = -c_far / (c_far - c_near);
-	//p_mat[2][3] = 1;
-	//p_mat[3][2] = -c_far * c_near / (c_far - c_near);
-	//p_mat[3][3] = 0;
-
-	p_mat[0][0] = (2 * c_near) / (c_right - c_left);
-	p_mat[1][1] = (2 * c_near) / (c_top - c_bot);
-	p_mat[2][0] = (c_right + c_left) / (c_right - c_left);
-	p_mat[2][1] = (c_top + c_bot) / (c_top - c_bot);
-	p_mat[2][2] = -(c_far + c_near) / (c_far - c_near);
-	p_mat[2][3] = 1;
-	p_mat[3][2] = -(2 * c_far * c_near) / (c_far - c_near);
-	p_mat[3][3] = 0;
+	pMat[0][0] = (2 * cNear) / (cRight - cLeft);
+	pMat[1][1] = (2 * cNear) / (cTop - cBot);
+	pMat[2][0] = (cRight + cLeft) / (cRight - cLeft);
+	pMat[2][1] = (cTop + cBot) / (cTop - cBot);
+	pMat[2][2] = -(cFar + cNear) / (cFar - cNear);
+	pMat[2][3] = 1;
+	pMat[3][2] = -(2 * cFar * cNear) / (cFar - cNear);
+	pMat[3][3] = 0;
 
 }
 
@@ -54,116 +46,33 @@ bool Rasterizer::project_triangle(Triangle& tri, float mat[4][4])
 	func::vecXmatrix(tri.transVerts[2], mat, tri.projVerts[2], true);
 
 
-	//if (tri.projVerts[0].x > tri.projVerts[0].w && tri.projVerts[1].x > tri.projVerts[1].w && tri.projVerts[2].x > tri.projVerts[2].w)
-	//	return false;
-	//if (tri.projVerts[0].x < -tri.projVerts[0].w && tri.projVerts[1].x < -tri.projVerts[1].w && tri.projVerts[2].x < -tri.projVerts[2].w)
-	//	return false;
-	//if (tri.projVerts[0].y > tri.projVerts[0].w && tri.projVerts[1].y > tri.projVerts[1].w && tri.projVerts[2].y > tri.projVerts[2].w)
-	//	return false;
-	//if (tri.projVerts[0].y < -tri.projVerts[0].w && tri.projVerts[1].y < -tri.projVerts[1].w && tri.projVerts[2].y < -tri.projVerts[2].w)
-	//	return false;
-
-
-
 	for (int i = 0; i < 3; ++i)
 	{
-		tri.projVerts[i].x = floor((tri.projVerts[i].x + 1) / 2 * w_width);
-		tri.projVerts[i].y = floor((1 - tri.projVerts[i].y) / 2 * w_height);
+		tri.projVerts[i].x = floor((tri.projVerts[i].x + 1) / 2 * wWidth);
+		tri.projVerts[i].y = floor((1 - tri.projVerts[i].y) / 2 * wHeight);
 	}
-	tri.bLeft = std::min({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
-	tri.bTop = std::min({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
-	tri.bRight = std::max({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x });
-	tri.bBot = std::max({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y });
-	//out.push_back(&tri);
+
 	return true;
 }
 
-
-int Rasterizer::clip_triangle_near(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete) const
+void Rasterizer::calculateBoundingBox(Triangle& tri)
 {
-	if (tri.transVerts[0].z >= c_near && tri.transVerts[1].z >= c_near && tri.transVerts[2].z >= c_near)
-	{
-		outputTris.push_back(&tri);
-		return 1;
-	}
-	else if (tri.transVerts[0].z < c_near && tri.transVerts[1].z < c_near && tri.transVerts[2].z < c_near)
-	{
-		return 0;
-	}
+	tri.bLeft = std::max(0.0f, std::min({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x, (float)wWidth - 1 }));
+	tri.bTop = std::max(0.0f, std::min({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y, (float)wHeight - 1 }));
+	tri.bRight = std::min((float)wWidth - 1, std::max({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x, 0.0f }));
+	tri.bBot = std::min((float)wHeight - 1, std::max({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y, 0.0f }));
+}
 
-	std::vector<vec4> clippedVertices;
-	std::vector<vec4> safeVertices;
-	std::vector<vec2> clippedTVertices;
-	std::vector<vec2> safeTVertices;
-
-	for (int i = 0; i < 3; ++i)
-	{
-		if (tri.transVerts[i].z < c_near)
-		{
-			clippedVertices.push_back(tri.transVerts[i]);
-			clippedTVertices.push_back(tri.tCoords[i]);
-		}
-		else
-		{
-			safeVertices.push_back(tri.transVerts[i]);
-			safeTVertices.push_back(tri.tCoords[i]);
-		}
-	}
-
-	// only need to create one new triangle
-	if (clippedVertices.size() == 2)
-	{
-		float t;
-		vec4 one = func::getIntersection(vec4(0, 0, c_near), vec4(0, 0, 1), safeVertices[0], clippedVertices[0], t);
-		vec2 newT1;
-		newT1.x = safeTVertices[0].x + (t * (clippedTVertices[0].x - safeTVertices[0].x));
-		newT1.y = safeTVertices[0].y + (t * (clippedTVertices[0].y - safeTVertices[0].y));
-
-		vec4 two = func::getIntersection(vec4(0, 0, c_near), vec4(0, 0, 1), safeVertices[0], clippedVertices[1], t);
-		vec2 newT2;
-		newT2.x = safeTVertices[0].x + (t * (clippedTVertices[1].x - safeTVertices[0].x));
-		newT2.y = safeTVertices[0].y + (t * (clippedTVertices[1].y - safeTVertices[0].y));
-
-		Triangle *clippedTri = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, newT2, safeTVertices[0], tri.associatedMtl);
-		clippedTri->transVerts[0] = one;
-		clippedTri->transVerts[1] = two;
-		clippedTri->transVerts[2] = safeVertices[0];
-		outputTris.push_back(clippedTri);
-		trisToDelete.push_back(clippedTri);
-		return 1;
-	}
-
-	else if (clippedVertices.size() == 1)
-	{
-		float t;
-		vec4 one = func::getIntersection(vec4(0, 0, c_near), vec4(0, 0, 1), safeVertices[0], clippedVertices[0], t);
-		vec2 newT1;
-		newT1.x = safeTVertices[0].x + (t * (clippedTVertices[0].x - safeTVertices[0].x));
-		newT1.y = safeTVertices[0].y + (t * (clippedTVertices[0].y - safeTVertices[0].y));
-
-		vec4 two = func::getIntersection(vec4(0, 0, c_near), vec4(0, 0, 1), safeVertices[1], clippedVertices[0], t);
-		vec2 newT2;
-		newT2.x = safeTVertices[1].x + (t * (clippedTVertices[0].x - safeTVertices[1].x));
-		newT2.y = safeTVertices[1].y + (t * (clippedTVertices[0].y - safeTVertices[1].y));
-
-		Triangle *clippedTri = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, newT2, safeTVertices[1], tri.associatedMtl);
-		clippedTri->transVerts[0] = one;
-		clippedTri->transVerts[1] = two;
-		clippedTri->transVerts[2] = safeVertices[1];
-		Triangle *clippedTri2 = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, safeTVertices[0], safeTVertices[1], tri.associatedMtl);
-		clippedTri2->transVerts[0] = one;
-		clippedTri2->transVerts[1] = safeVertices[0];
-		clippedTri2->transVerts[2] = safeVertices[1];
-		outputTris.push_back(clippedTri);
-		outputTris.push_back(clippedTri2);
-		trisToDelete.push_back(clippedTri);
-		trisToDelete.push_back(clippedTri2);
-
-		return 2;
-	}
-	return 0;
+void Rasterizer::calculateVertexData(Triangle& tri)
+{
+	tri.vertexDepth[0] = 1 / tri.transVerts[0].z;
+	tri.vertexDepth[1] = 1 / tri.transVerts[1].z;
+	tri.vertexDepth[2] = 1 / tri.transVerts[2].z;
 
 
+	tri.tx[0] = tri.tCoords[0].x / tri.transVerts[0].z; tri.tx[1] = tri.tCoords[1].x / tri.transVerts[1].z; tri.tx[2] = tri.tCoords[2].x / tri.transVerts[2].z;
+	tri.ty[0] = tri.tCoords[0].y / tri.transVerts[0].z; tri.ty[1] = tri.tCoords[1].y / tri.transVerts[1].z; tri.ty[2] = tri.tCoords[2].y / tri.transVerts[2].z;
+	tri.area = func::edge_f(vec2(tri.projVerts[0].x, tri.projVerts[0].y), tri.projVerts[1], tri.projVerts[2]);
 }
 
 void Rasterizer::rasterTile(Tile& tile, std::vector<std::vector<float>>& z_buffer, sf::Uint8*& buffer)
@@ -221,7 +130,7 @@ void Rasterizer::rasterTile(Tile& tile, std::vector<std::vector<float>>& z_buffe
 						int zindex = k + j;
 						if (inv_z < z_buffer[zindex][i])
 						{
-							int index = (zindex + i * w_width) * 4;
+							int index = (zindex + i * wWidth) * 4;
 
 							float u = (triangle->tx[0] * b0t) +
 								(triangle->tx[1] * b1t) +

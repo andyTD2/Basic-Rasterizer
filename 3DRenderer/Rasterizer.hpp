@@ -9,20 +9,21 @@
 class Rasterizer
 {
 public:
-	int w_width, w_height;
-	float c_near, c_far;
+	int wWidth, wHeight;
+	float cNear, cFar;
 	float nWidth, nHeight;
 	float fWidth, fHeight;
-	float c_top, c_right, c_bot, c_left;
+	float cTop, cRight, cBot, cLeft;
 
 	int fov;
-	float aspect_ratio;
+	float aspectRatio;
 
-	float p_mat[4][4];
+	float pMat[4][4];
 
 
-	Rasterizer(int _w_width, int _w_height, float _c_near, float _c_far, int fov);
+	Rasterizer(int newWWidth, int newWHeight, float newCNear, float newCFar, int newFov);
 	bool project_triangle(Triangle& tri, float mat[4][4]);
-	int clip_triangle_near(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete) const;
+	void calculateBoundingBox(Triangle& tri);
+	void calculateVertexData(Triangle& tri);
 	void rasterTile(Tile& tile, std::vector<std::vector<float>>& z_buffer, sf::Uint8*& buffer);
 };

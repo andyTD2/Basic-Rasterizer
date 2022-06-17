@@ -97,7 +97,7 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 
 
 	//now update our frustum normals(necessary for clipping/culling)
-	vec4 farCenter = camPos + (curForward * rasterizer.c_far);
+	vec4 farCenter = camPos + (curForward * rasterizer.cFar);
 	vec4 eUp = curUp * (rasterizer.fHeight / 2);
 	vec4 eRight = curRight * (rasterizer.fWidth / 2);
 	vec4 farTopRight = farCenter + eUp + eRight;
@@ -105,7 +105,7 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 	vec4 farBotRight = farCenter - eUp + eRight;
 
 
-	vec4 nearCenter = camPos + (curForward * rasterizer.c_near);
+	vec4 nearCenter = camPos + (curForward * rasterizer.cNear);
 	eUp = curUp * (rasterizer.nHeight / 2);
 	eRight = curRight * (rasterizer.nWidth / 2);
 	vec4 nearTopLeft = nearCenter + eUp - eRight;
@@ -157,4 +157,98 @@ void Camera::transformToViewSpace(Triangle& triangle) const
 	func::vecXmatrix(triangle.verts[0], camMatrix, triangle.transVerts[0], false);
 	func::vecXmatrix(triangle.verts[1], camMatrix, triangle.transVerts[1], false);
 	func::vecXmatrix(triangle.verts[2], camMatrix, triangle.transVerts[2], false);
+}
+
+int Camera::clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete, float nearPlaneDepth) const
+{
+	if (tri.transVerts[0].z >= nearPlaneDepth && tri.transVerts[1].z >= nearPlaneDepth && tri.transVerts[2].z >= nearPlaneDepth)
+	{
+		outputTris.push_back(&tri);
+		return 1;
+	}
+	else if (tri.transVerts[0].z < nearPlaneDepth && tri.transVerts[1].z < nearPlaneDepth && tri.transVerts[2].z < nearPlaneDepth)
+	{
+		return 0;
+	}
+
+	std::vector<vec4> clippedVertices;
+	std::vector<vec4> safeVertices;
+	std::vector<vec2> clippedTVertices;
+	std::vector<vec2> safeTVertices;
+
+	for (int i = 0; i < 3; ++i)
+	{
+		if (tri.transVerts[i].z < nearPlaneDepth)
+		{
+			clippedVertices.push_back(tri.transVerts[i]);
+			clippedTVertices.push_back(tri.tCoords[i]);
+		}
+		else
+		{
+			safeVertices.push_back(tri.transVerts[i]);
+			safeTVertices.push_back(tri.tCoords[i]);
+		}
+	}
+
+	// only need to create one new triangle
+	if (clippedVertices.size() == 2)
+	{
+		float t;
+		vec4 one = func::getIntersection(vec4(0, 0, nearPlaneDepth), vec4(0, 0, 1), safeVertices[0], clippedVertices[0], t);
+		vec2 newT1;
+		newT1.x = safeTVertices[0].x + (t * (clippedTVertices[0].x - safeTVertices[0].x));
+		newT1.y = safeTVertices[0].y + (t * (clippedTVertices[0].y - safeTVertices[0].y));
+
+		vec4 two = func::getIntersection(vec4(0, 0, nearPlaneDepth), vec4(0, 0, 1), safeVertices[0], clippedVertices[1], t);
+		vec2 newT2;
+		newT2.x = safeTVertices[0].x + (t * (clippedTVertices[1].x - safeTVertices[0].x));
+		newT2.y = safeTVertices[0].y + (t * (clippedTVertices[1].y - safeTVertices[0].y));
+
+		Triangle* clippedTri = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, newT2, safeTVertices[0], tri.associatedMtl);
+		clippedTri->transVerts[0] = one;
+		clippedTri->transVerts[1] = two;
+		clippedTri->transVerts[2] = safeVertices[0];
+		clippedTri->triangleTexture = tri.triangleTexture;
+		clippedTri->tWidth = tri.tWidth;
+		clippedTri->tHeight = tri.tHeight;
+		outputTris.push_back(clippedTri);
+		trisToDelete.push_back(clippedTri);
+		return 1;
+	}
+
+	else if (clippedVertices.size() == 1)
+	{
+		float t;
+		vec4 one = func::getIntersection(vec4(0, 0, nearPlaneDepth), vec4(0, 0, 1), safeVertices[0], clippedVertices[0], t);
+		vec2 newT1;
+		newT1.x = safeTVertices[0].x + (t * (clippedTVertices[0].x - safeTVertices[0].x));
+		newT1.y = safeTVertices[0].y + (t * (clippedTVertices[0].y - safeTVertices[0].y));
+
+		vec4 two = func::getIntersection(vec4(0, 0, nearPlaneDepth), vec4(0, 0, 1), safeVertices[1], clippedVertices[0], t);
+		vec2 newT2;
+		newT2.x = safeTVertices[1].x + (t * (clippedTVertices[0].x - safeTVertices[1].x));
+		newT2.y = safeTVertices[1].y + (t * (clippedTVertices[0].y - safeTVertices[1].y));
+
+		Triangle* clippedTri = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, newT2, safeTVertices[1], tri.associatedMtl);
+		clippedTri->transVerts[0] = one;
+		clippedTri->transVerts[1] = two;
+		clippedTri->transVerts[2] = safeVertices[1];
+		clippedTri->triangleTexture = tri.triangleTexture;
+		clippedTri->tWidth = tri.tWidth;
+		clippedTri->tHeight = tri.tHeight;
+		Triangle* clippedTri2 = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, safeTVertices[0], safeTVertices[1], tri.associatedMtl);
+		clippedTri2->transVerts[0] = one;
+		clippedTri2->transVerts[1] = safeVertices[0];
+		clippedTri2->transVerts[2] = safeVertices[1];
+		clippedTri2->triangleTexture = tri.triangleTexture;
+		clippedTri2->tWidth = tri.tWidth;
+		clippedTri2->tHeight = tri.tHeight;
+		outputTris.push_back(clippedTri);
+		outputTris.push_back(clippedTri2);
+		trisToDelete.push_back(clippedTri);
+		trisToDelete.push_back(clippedTri2);
+
+		return 2;
+	}
+	return 0;
 }
