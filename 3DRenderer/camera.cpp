@@ -9,17 +9,21 @@ Camera::Camera()
 	rotationSpeed = .5; panSpeed = .1;
 }
 
-Camera::Camera(float newRotationSpeed, float newPanSpeed)
+Camera::Camera(float newRotationSpeed, float newPanSpeed, float newCNear, float newCFar, float newFov)
 {
 	camPos.x = 0; camPos.y = 0; camPos.z = 0;
 	lookDir.x = 0; lookDir.y = 0; lookDir.z = 1;
 	curXRotation = 0; curYRotation = 0;
 	rotationSpeed = newRotationSpeed;
 	panSpeed = newPanSpeed;
+
+	cNear = newCNear;
+	cFar = newCFar;
+	fov = newFov;
 }
 
 void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool rotateDown,
-	bool panForward, bool panBackwards, bool panLeft, bool panRight, const Rasterizer& rasterizer)
+	bool panForward, bool panBackwards, bool panLeft, bool panRight)
 {
 	velocity = lookDir * panSpeed;
 
@@ -96,18 +100,23 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 	camMatrix[3][3] = 1.0f;
 
 
+	float nWidth = tan((fov / 2) * 3.14159265359 / 180) * cNear * 2;
+	float nHeight = nWidth;
+	float fWidth = tan((fov / 2) * 3.14159265359 / 180) * cFar * 2;
+	float fHeight = fWidth;
+
 	//now update our frustum normals(necessary for clipping/culling)
-	vec4 farCenter = camPos + (curForward * rasterizer.cFar);
-	vec4 eUp = curUp * (rasterizer.fHeight / 2);
-	vec4 eRight = curRight * (rasterizer.fWidth / 2);
+	vec4 farCenter = camPos + (curForward * cFar);
+	vec4 eUp = curUp * (fHeight / 2);
+	vec4 eRight = curRight * (fWidth / 2);
 	vec4 farTopRight = farCenter + eUp + eRight;
 	vec4 farTopLeft = farCenter + eUp - eRight;
 	vec4 farBotRight = farCenter - eUp + eRight;
 
 
-	vec4 nearCenter = camPos + (curForward * rasterizer.cNear);
-	eUp = curUp * (rasterizer.nHeight / 2);
-	eRight = curRight * (rasterizer.nWidth / 2);
+	vec4 nearCenter = camPos + (curForward * cNear);
+	eUp = curUp * (nHeight / 2);
+	eRight = curRight * (nWidth / 2);
 	vec4 nearTopLeft = nearCenter + eUp - eRight;
 	vec4 nearBotLeft = nearCenter - eUp - eRight;
 	vec4 nearBotRight = nearCenter - eUp + eRight;
@@ -159,14 +168,14 @@ void Camera::transformToViewSpace(Triangle& triangle) const
 	func::vecXmatrix(triangle.verts[2], camMatrix, triangle.transVerts[2], false);
 }
 
-int Camera::clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete, float nearPlaneDepth) const
+int Camera::clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete) const
 {
-	if (tri.transVerts[0].z >= nearPlaneDepth && tri.transVerts[1].z >= nearPlaneDepth && tri.transVerts[2].z >= nearPlaneDepth)
+	if (tri.transVerts[0].z >= cNear && tri.transVerts[1].z >= cNear && tri.transVerts[2].z >= cNear)
 	{
 		outputTris.push_back(&tri);
 		return 1;
 	}
-	else if (tri.transVerts[0].z < nearPlaneDepth && tri.transVerts[1].z < nearPlaneDepth && tri.transVerts[2].z < nearPlaneDepth)
+	else if (tri.transVerts[0].z < cNear && tri.transVerts[1].z < cNear && tri.transVerts[2].z < cNear)
 	{
 		return 0;
 	}
@@ -178,7 +187,7 @@ int Camera::clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, 
 
 	for (int i = 0; i < 3; ++i)
 	{
-		if (tri.transVerts[i].z < nearPlaneDepth)
+		if (tri.transVerts[i].z < cNear)
 		{
 			clippedVertices.push_back(tri.transVerts[i]);
 			clippedTVertices.push_back(tri.tCoords[i]);
@@ -194,12 +203,12 @@ int Camera::clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, 
 	if (clippedVertices.size() == 2)
 	{
 		float t;
-		vec4 one = func::getIntersection(vec4(0, 0, nearPlaneDepth), vec4(0, 0, 1), safeVertices[0], clippedVertices[0], t);
+		vec4 one = func::getIntersection(vec4(0, 0, cNear), vec4(0, 0, 1), safeVertices[0], clippedVertices[0], t);
 		vec2 newT1;
 		newT1.x = safeTVertices[0].x + (t * (clippedTVertices[0].x - safeTVertices[0].x));
 		newT1.y = safeTVertices[0].y + (t * (clippedTVertices[0].y - safeTVertices[0].y));
 
-		vec4 two = func::getIntersection(vec4(0, 0, nearPlaneDepth), vec4(0, 0, 1), safeVertices[0], clippedVertices[1], t);
+		vec4 two = func::getIntersection(vec4(0, 0, cNear), vec4(0, 0, 1), safeVertices[0], clippedVertices[1], t);
 		vec2 newT2;
 		newT2.x = safeTVertices[0].x + (t * (clippedTVertices[1].x - safeTVertices[0].x));
 		newT2.y = safeTVertices[0].y + (t * (clippedTVertices[1].y - safeTVertices[0].y));
@@ -219,12 +228,12 @@ int Camera::clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, 
 	else if (clippedVertices.size() == 1)
 	{
 		float t;
-		vec4 one = func::getIntersection(vec4(0, 0, nearPlaneDepth), vec4(0, 0, 1), safeVertices[0], clippedVertices[0], t);
+		vec4 one = func::getIntersection(vec4(0, 0, cNear), vec4(0, 0, 1), safeVertices[0], clippedVertices[0], t);
 		vec2 newT1;
 		newT1.x = safeTVertices[0].x + (t * (clippedTVertices[0].x - safeTVertices[0].x));
 		newT1.y = safeTVertices[0].y + (t * (clippedTVertices[0].y - safeTVertices[0].y));
 
-		vec4 two = func::getIntersection(vec4(0, 0, nearPlaneDepth), vec4(0, 0, 1), safeVertices[1], clippedVertices[0], t);
+		vec4 two = func::getIntersection(vec4(0, 0, cNear), vec4(0, 0, 1), safeVertices[1], clippedVertices[0], t);
 		vec2 newT2;
 		newT2.x = safeTVertices[1].x + (t * (clippedTVertices[0].x - safeTVertices[1].x));
 		newT2.y = safeTVertices[1].y + (t * (clippedTVertices[0].y - safeTVertices[1].y));

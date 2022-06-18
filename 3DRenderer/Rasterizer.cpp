@@ -3,22 +3,11 @@
 
 
 
-Rasterizer::Rasterizer(int newWWidth, int newWHeight, float newCNear, float newCFar, int newFov) :
-	wWidth(newWWidth), wHeight(newWHeight), cNear(newCNear), cFar(newCFar), fov(newFov)
+Rasterizer::Rasterizer(int newWindowWidth, int newWindowHeight, int fov, float cNear, float cFar)
 {
-	const float pi = 3.141592653;
-	aspectRatio = wWidth / wHeight;
-
-	//canvas size and dimensions
-	nWidth = tan((fov / 2) * pi / 180) * cNear * 2;
-	nHeight = nWidth;
-	fWidth = tan((fov / 2) * pi / 180) * cFar * 2;
-	fHeight = fWidth;
-
-	cTop = nHeight / 2;
-	cRight = nWidth / 2;
-	cBot = -cTop;
-	cLeft = -cRight;
+	wWidth = newWindowWidth;
+	wHeight = newWindowHeight;
+	float aspectRatio = wWidth / wHeight;
 
 	for (int i = 0; i < 4; ++i)
 	{
@@ -28,22 +17,20 @@ Rasterizer::Rasterizer(int newWWidth, int newWHeight, float newCNear, float newC
 		}
 	}
 
-	pMat[0][0] = (2 * cNear) / (cRight - cLeft);
-	pMat[1][1] = (2 * cNear) / (cTop - cBot);
-	pMat[2][0] = (cRight + cLeft) / (cRight - cLeft);
-	pMat[2][1] = (cTop + cBot) / (cTop - cBot);
-	pMat[2][2] = -(cFar + cNear) / (cFar - cNear);
+	pMat[0][0] = aspectRatio * 1.0 / tan(fov * 0.5f / 180.0f * 3.14159f);
+	pMat[1][1] = 1.0 / tan(fov * 0.5f / 180.0f * 3.14159f);
+	pMat[2][2] = cFar / (cFar - cNear);
 	pMat[2][3] = 1;
-	pMat[3][2] = -(2 * cFar * cNear) / (cFar - cNear);
+	pMat[3][2] = (-cFar * cNear) / (cFar - cNear);
 	pMat[3][3] = 0;
 
 }
 
-bool Rasterizer::project_triangle(Triangle& tri, float mat[4][4])
+bool Rasterizer::project_triangle(Triangle& tri)
 {
-	func::vecXmatrix(tri.transVerts[0], mat, tri.projVerts[0], true);
-	func::vecXmatrix(tri.transVerts[1], mat, tri.projVerts[1], true);
-	func::vecXmatrix(tri.transVerts[2], mat, tri.projVerts[2], true);
+	func::vecXmatrix(tri.transVerts[0], pMat, tri.projVerts[0], true);
+	func::vecXmatrix(tri.transVerts[1], pMat, tri.projVerts[1], true);
+	func::vecXmatrix(tri.transVerts[2], pMat, tri.projVerts[2], true);
 
 
 	for (int i = 0; i < 3; ++i)

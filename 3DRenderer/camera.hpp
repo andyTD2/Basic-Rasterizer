@@ -7,15 +7,15 @@ class Camera
 {
 public:
 	Camera();
-	Camera(float newRotationSpeed, float newPanSpeed);
-	void updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool rotateDown,
-		bool panForward, bool panBackwards, bool panLeft, bool panRight, const Rasterizer& rasterizer);
+	Camera(float newRotationSpeed, float newPanSpeed, float newCNear, float newCFar, float newFov);
 
+	void updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool rotateDown,
+		bool panForward, bool panBackwards, bool panLeft, bool panRight);
 	void setRotationSpeed(float newSpeed);
 	void setPanSpeed(float newSpeed);
 	bool checkIfTriangleCulled(const Triangle& triangle) const;
 	void transformToViewSpace(Triangle& triangle) const;
-	int clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete, float nearPlaneDepth) const;
+	int clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete) const;
 
 
 	float camMatrix[4][4];
@@ -31,6 +31,9 @@ public:
 	vec4 leftNormal;
 	vec4 topNormal;
 	vec4 botNormal;
+
+	float cNear, cFar;
+	float fov;
 private:
 	float curXRotation;
 	float curYRotation;

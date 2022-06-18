@@ -28,12 +28,12 @@ float func::vecXmatrix(const vec4& vec, const float matrix[4][4], vec4& result, 
 
 	__m128 sum = _mm_add_ps(_mm256_extractf128_ps(add, 0), _mm256_extractf128_ps(add, 1));
 	float* sumArray = (float*)&sum;
-	
+
 	result.x = sumArray[0];
 	result.y = sumArray[1];
 	result.z = sumArray[2];
 	result.w = sumArray[3];
-	
+
 	if (result.w != 1 && project)
 	{
 		result.x /= result.w;

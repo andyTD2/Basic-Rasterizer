@@ -16,14 +16,15 @@
 
 int main()
 {
-
 	bool camera_rotating_right = false, camera_rotating_left = false, camera_rotating_up = false, camera_rotating_down = false;
 	bool camera_pan_forward = false, camera_pan_backwards = false, camera_pan_left = false, camera_pan_right = false;
-	Camera cam(1, 5);
+
+	//recommend near value of 2, might have artifacts if < 1
+	Camera cam(1, 5, 2, 1000, 60);
 
 	//height & width values must be divisible by 16
-	//recommend near value of 2, might have artifacts if < 1
-	Rasterizer rasterizer = Rasterizer(1024, 1024, 2, 1000, 60);
+	//no aspect ratio scaling as of yet!!
+	Rasterizer rasterizer = Rasterizer(1024, 1024, cam.fov, cam.cNear, cam.cFar);
 	sf::RenderWindow window(sf::VideoMode(rasterizer.wWidth, rasterizer.wHeight), "3D Render");
 
 	sf::Clock clock = sf::Clock::Clock();
@@ -32,28 +33,21 @@ int main()
 	sf::Font font;
 	font.loadFromFile("arial.ttf");
 	float fps;
-	
+
 	int numThreads = std::thread::hardware_concurrency() - 1;
 	if (numThreads <= 0)
 		numThreads = 1;
-	tbb::task_group g;
+	tbb::task_group threadPool;
 
 	Scene scene;
 	scene.loadScene("sponza.obj");
 
-	std::vector<std::string> names;
-	for (std::pair<std::string, sf::Uint8*> name : scene.textureData)
-	{
-		names.push_back(name.first);
-	}
-
-	int bufferSize = rasterizer.wWidth * rasterizer.wHeight * 4;
 	int numTiles = 8;
 
+	sf::Event event;
 	while (window.isOpen())
 	{
 		//Handle keyboard input
-		sf::Event event;
 		while (window.pollEvent(event))
 		{
 			if (event.type == sf::Event::Closed)
@@ -81,12 +75,7 @@ int main()
 				else if (event.key.code == sf::Keyboard::A) camera_pan_left = false;
 				else if (event.key.code == sf::Keyboard::D) camera_pan_right = false;
 			}
-
 		}
-
-		//DECLARE/RESET our buffers
-		sf::Uint8* buffer = new sf::Uint8[bufferSize];
-		std::vector<std::vector<float>> z_buffer((float)rasterizer.wWidth, std::vector<float>(rasterizer.wHeight, FLT_MAX));
 
 		/*
 		Since our clipping algorithm can produce new triangles that we want to discard after each frame, we add an additional vector
@@ -101,10 +90,10 @@ int main()
 
 		//Update camera position(this sets a transformation matrix in cam.camMatrix)
 		cam.updateCamera(camera_rotating_left, camera_rotating_right, camera_rotating_up, camera_rotating_down,
-			camera_pan_forward, camera_pan_backwards, camera_pan_left, camera_pan_right, rasterizer);
+			camera_pan_forward, camera_pan_backwards, camera_pan_left, camera_pan_right);
 
 		/*
-		Our camera handles conversion to view space based off camera movement. It also clips triangles 
+		Our camera handles conversion to view space based off camera movement. It also clips triangles
 		against the camera's near plane and culls triangles that are outside the camera's view frustum
 		*/
 		int increment = scene.sceneData.size() / numThreads;
@@ -113,19 +102,19 @@ int main()
 			int start = i * increment;
 			int end = (i >= numThreads - 1) ? scene.sceneData.size() : start + increment;
 
-			g.run([&, start, end, i] 
-			{
-				for (int j = start; j < end; ++j) 
+			threadPool.run([&, start, end, i]
 				{
-					if (!cam.checkIfTriangleCulled(scene.sceneData[j]))
+					for (int j = start; j < end; ++j)
 					{
-						cam.transformToViewSpace(scene.sceneData[j]);
-						cam.clipTriangleNear(scene.sceneData[j], triangleLists[i], trisToDelete[i], rasterizer.cNear);
+						if (!cam.checkIfTriangleCulled(scene.sceneData[j]))
+						{
+							cam.transformToViewSpace(scene.sceneData[j]);
+							cam.clipTriangleNear(scene.sceneData[j], triangleLists[i], trisToDelete[i]);
+						}
 					}
-				}
-			});
+				});
 		}
-		g.wait();
+		threadPool.wait();
 
 
 		/*
@@ -134,17 +123,17 @@ int main()
 		*/
 		for (auto& list : triangleLists)
 		{
-			g.run([&]
-			{
-				for (auto& tri : list)
+			threadPool.run([&]
 				{
-					rasterizer.project_triangle(*tri, rasterizer.pMat);
-					rasterizer.calculateBoundingBox(*tri);
-					rasterizer.calculateVertexData(*tri);
-				}
-			});
+					for (auto& tri : list)
+					{
+						rasterizer.project_triangle(*tri);
+						rasterizer.calculateBoundingBox(*tri);
+						rasterizer.calculateVertexData(*tri);
+					}
+				});
 		}
-		g.wait();
+		threadPool.wait();
 
 
 		/*
@@ -156,13 +145,17 @@ int main()
 			tileManager.binTriangles(list);
 		}
 
+		//Our pixel buffer and depth buffers
+		sf::Uint8* buffer = new sf::Uint8[rasterizer.wWidth * rasterizer.wHeight * 4];
+		std::vector<std::vector<float>> z_buffer((float)rasterizer.wWidth, std::vector<float>(rasterizer.wHeight, FLT_MAX));
+
 		//Render pixels to screen
 		for (auto& row : tileManager.tiles)
 		{
 			for (auto& tile : row)
-				g.run([&] {rasterizer.rasterTile(tile, z_buffer, buffer); });
+				threadPool.run([&] {rasterizer.rasterTile(tile, z_buffer, buffer); });
 		}
-		g.wait();
+		threadPool.wait();
 
 
 		//Compute number of triangles currently being processed on screen
@@ -177,29 +170,22 @@ int main()
 		//setup to display fps counter
 		cur_time = clock.getElapsedTime();
 		fps = 1.0f / (cur_time.asSeconds() - last_time.asSeconds());
-		sf::Text frames(std::to_string((int)fps), font, 50);
+		sf::Text frames(std::to_string((int)fps) + " N= " + std::to_string((int)numTrisBeingDrawn), font, 50);
 		frames.setFillColor(sf::Color::Cyan);
 		last_time = cur_time;
 
 
-		//setup display triangle counter
-		sf::Text numTrisText("N=" + std::to_string((int)numTrisBeingDrawn), font, 50);
-		numTrisText.setPosition(sf::Vector2f(100, 0));
-		numTrisText.setFillColor(sf::Color::Cyan);
-
-
+		//using SFML to display pixels on screen
 		sf::Image image;
 		image.create(rasterizer.wWidth, rasterizer.wHeight, buffer);
 
 		sf::Texture texture;
 		texture.loadFromImage(image);
 
-		sf::Sprite sprite;
-		sprite.setTexture(texture);
+		sf::Sprite sprite(texture);
 
 		window.draw(sprite);
 		window.draw(frames);
-		window.draw(numTrisText);
 		window.display();
 
 		delete[] buffer;
