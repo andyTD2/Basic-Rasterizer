@@ -26,7 +26,7 @@ Rasterizer::Rasterizer(int newWindowWidth, int newWindowHeight, int fov, float c
 
 }
 
-bool Rasterizer::project_triangle(Triangle& tri)
+bool Rasterizer::project_triangle(Triangle& tri) const
 {
 	func::vecXmatrix(tri.transVerts[0], pMat, tri.projVerts[0], true);
 	func::vecXmatrix(tri.transVerts[1], pMat, tri.projVerts[1], true);
@@ -42,7 +42,7 @@ bool Rasterizer::project_triangle(Triangle& tri)
 	return true;
 }
 
-void Rasterizer::calculateBoundingBox(Triangle& tri)
+void Rasterizer::calculateBoundingBox(Triangle& tri) const
 {
 	tri.bLeft = std::max(0.0f, std::min({ tri.projVerts[0].x, tri.projVerts[1].x, tri.projVerts[2].x, (float)wWidth - 1 }));
 	tri.bTop = std::max(0.0f, std::min({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y, (float)wHeight - 1 }));
@@ -50,7 +50,7 @@ void Rasterizer::calculateBoundingBox(Triangle& tri)
 	tri.bBot = std::min((float)wHeight - 1, std::max({ tri.projVerts[0].y, tri.projVerts[1].y, tri.projVerts[2].y, 0.0f }));
 }
 
-void Rasterizer::calculateVertexData(Triangle& tri)
+void Rasterizer::calculateVertexData(Triangle& tri) const
 {
 	tri.vertexDepth[0] = 1 / tri.transVerts[0].z;
 	tri.vertexDepth[1] = 1 / tri.transVerts[1].z;
@@ -62,7 +62,7 @@ void Rasterizer::calculateVertexData(Triangle& tri)
 	tri.area = func::edge_f(vec2(tri.projVerts[0].x, tri.projVerts[0].y), tri.projVerts[1], tri.projVerts[2]);
 }
 
-void Rasterizer::rasterTile(Tile& tile, std::vector<std::vector<float>>& z_buffer, sf::Uint8*& buffer)
+void Rasterizer::rasterTile(const Tile& tile, std::vector<std::vector<float>>& zBuffer, sf::Uint8*& pixelBuffer) const
 {
 	__m256 factor = _mm256_set_ps(7, 6, 5, 4, 3, 2, 1, 0);
 	for (auto& triangle : tile.trianglesToRender)
@@ -115,7 +115,7 @@ void Rasterizer::rasterTile(Tile& tile, std::vector<std::vector<float>>& z_buffe
 
 						float inv_z = 1 / z;
 						int zindex = k + j;
-						if (inv_z < z_buffer[zindex][i])
+						if (inv_z < zBuffer[zindex][i])
 						{
 							int index = (zindex + i * wWidth) * 4;
 
@@ -145,11 +145,11 @@ void Rasterizer::rasterTile(Tile& tile, std::vector<std::vector<float>>& z_buffe
 							int index2 = (floor(texel.x) + floor(texel.y) * triangle->tWidth) * 4;
 							if (triangle->triangleTexture[index2 + 3] > 0)
 							{
-								z_buffer[zindex][i] = inv_z;
-								buffer[index] = triangle->triangleTexture[index2];
-								buffer[index + 1] = triangle->triangleTexture[index2 + 1];
-								buffer[index + 2] = triangle->triangleTexture[index2 + 2];
-								buffer[index + 3] = triangle->triangleTexture[index2 + 3];
+								zBuffer[zindex][i] = inv_z;
+								pixelBuffer[index] = triangle->triangleTexture[index2];
+								pixelBuffer[index + 1] = triangle->triangleTexture[index2 + 1];
+								pixelBuffer[index + 2] = triangle->triangleTexture[index2 + 2];
+								pixelBuffer[index + 3] = triangle->triangleTexture[index2 + 3];
 							}
 
 

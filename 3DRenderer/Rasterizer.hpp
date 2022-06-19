@@ -14,8 +14,8 @@ public:
 	float pMat[4][4];
 
 	Rasterizer(int newWindowWidth, int newWindowHeight, int fov, float cNear, float cFar);
-	bool project_triangle(Triangle& tri);
-	void calculateBoundingBox(Triangle& tri);
-	void calculateVertexData(Triangle& tri);
-	void rasterTile(Tile& tile, std::vector<std::vector<float>>& z_buffer, sf::Uint8*& buffer);
+	bool project_triangle(Triangle& tri) const;
+	void calculateBoundingBox(Triangle& tri) const;
+	void calculateVertexData(Triangle& tri) const;
+	void rasterTile(const Tile& tile, std::vector<std::vector<float>>& z_buffer, sf::Uint8*& buffer) const;
 };

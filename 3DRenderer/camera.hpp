@@ -17,8 +17,17 @@ public:
 	void transformToViewSpace(Triangle& triangle) const;
 	int clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, std::vector<Triangle*>& trisToDelete) const;
 
+	float cNear, cFar;
+	float fov;
+private:
 
+	float curXRotation;
+	float curYRotation;
+	float rotationSpeed;
+	float panSpeed;
 	float camMatrix[4][4];
+
+
 	vec4 camPos;
 	vec4 lookDir;
 	vec4 velocity;
@@ -31,12 +40,4 @@ public:
 	vec4 leftNormal;
 	vec4 topNormal;
 	vec4 botNormal;
-
-	float cNear, cFar;
-	float fov;
-private:
-	float curXRotation;
-	float curYRotation;
-	float rotationSpeed;
-	float panSpeed;
 };

@@ -1,3 +1,8 @@
+
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
@@ -13,11 +18,10 @@
 #include "camera.hpp"
 #include "Scene.hpp"
 
-
 int main()
 {
-	bool camera_rotating_right = false, camera_rotating_left = false, camera_rotating_up = false, camera_rotating_down = false;
-	bool camera_pan_forward = false, camera_pan_backwards = false, camera_pan_left = false, camera_pan_right = false;
+	bool cameraRotatingRight = false, cameraRotatingLeft = false, cameraRotatingUp = false, cameraRotatingDown = false;
+	bool cameraPanForward = false, cameraPanBackwards = false, cameraPanLeft = false, cameraPanRight = false;
 
 	//recommend near value of 2, might have artifacts if < 1
 	Camera cam(1, 5, 2, 1000, 60);
@@ -28,8 +32,8 @@ int main()
 	sf::RenderWindow window(sf::VideoMode(rasterizer.wWidth, rasterizer.wHeight), "3D Render");
 
 	sf::Clock clock = sf::Clock::Clock();
-	sf::Time last_time = clock.getElapsedTime();
-	sf::Time cur_time;
+	sf::Time lastTime = clock.getElapsedTime();
+	sf::Time curTime;
 	sf::Font font;
 	font.loadFromFile("arial.ttf");
 	float fps;
@@ -55,25 +59,25 @@ int main()
 
 			if (event.type == sf::Event::KeyPressed)
 			{
-				if (event.key.code == sf::Keyboard::Right) camera_rotating_right = true;
-				else if (event.key.code == sf::Keyboard::Left) camera_rotating_left = true;
-				else if (event.key.code == sf::Keyboard::Up) camera_rotating_up = true;
-				else if (event.key.code == sf::Keyboard::Down) camera_rotating_down = true;
-				else if (event.key.code == sf::Keyboard::W) camera_pan_forward = true;
-				else if (event.key.code == sf::Keyboard::S) camera_pan_backwards = true;
-				else if (event.key.code == sf::Keyboard::A) camera_pan_left = true;
-				else if (event.key.code == sf::Keyboard::D) camera_pan_right = true;
+				if (event.key.code == sf::Keyboard::Right) cameraRotatingRight = true;
+				else if (event.key.code == sf::Keyboard::Left) cameraRotatingLeft = true;
+				else if (event.key.code == sf::Keyboard::Up) cameraRotatingUp = true;
+				else if (event.key.code == sf::Keyboard::Down) cameraRotatingDown = true;
+				else if (event.key.code == sf::Keyboard::W) cameraPanForward = true;
+				else if (event.key.code == sf::Keyboard::S) cameraPanBackwards = true;
+				else if (event.key.code == sf::Keyboard::A) cameraPanLeft = true;
+				else if (event.key.code == sf::Keyboard::D) cameraPanRight = true;
 			}
 			else if (event.type == sf::Event::KeyReleased)
 			{
-				if (event.key.code == sf::Keyboard::Right) camera_rotating_right = false;
-				else if (event.key.code == sf::Keyboard::Left) camera_rotating_left = false;
-				else if (event.key.code == sf::Keyboard::Up) camera_rotating_up = false;
-				else if (event.key.code == sf::Keyboard::Down) camera_rotating_down = false;
-				else if (event.key.code == sf::Keyboard::W) camera_pan_forward = false;
-				else if (event.key.code == sf::Keyboard::S) camera_pan_backwards = false;
-				else if (event.key.code == sf::Keyboard::A) camera_pan_left = false;
-				else if (event.key.code == sf::Keyboard::D) camera_pan_right = false;
+				if (event.key.code == sf::Keyboard::Right) cameraRotatingRight = false;
+				else if (event.key.code == sf::Keyboard::Left) cameraRotatingLeft = false;
+				else if (event.key.code == sf::Keyboard::Up) cameraRotatingUp = false;
+				else if (event.key.code == sf::Keyboard::Down) cameraRotatingDown = false;
+				else if (event.key.code == sf::Keyboard::W) cameraPanForward = false;
+				else if (event.key.code == sf::Keyboard::S) cameraPanBackwards = false;
+				else if (event.key.code == sf::Keyboard::A) cameraPanLeft = false;
+				else if (event.key.code == sf::Keyboard::D) cameraPanRight = false;
 			}
 		}
 
@@ -89,8 +93,8 @@ int main()
 
 
 		//Update camera position(this sets a transformation matrix in cam.camMatrix)
-		cam.updateCamera(camera_rotating_left, camera_rotating_right, camera_rotating_up, camera_rotating_down,
-			camera_pan_forward, camera_pan_backwards, camera_pan_left, camera_pan_right);
+		cam.updateCamera(cameraRotatingLeft, cameraRotatingRight, cameraRotatingUp, cameraRotatingDown,
+			cameraPanForward, cameraPanBackwards, cameraPanLeft, cameraPanRight);
 
 		/*
 		Our camera handles conversion to view space based off camera movement. It also clips triangles
@@ -146,14 +150,14 @@ int main()
 		}
 
 		//Our pixel buffer and depth buffers
-		sf::Uint8* buffer = new sf::Uint8[rasterizer.wWidth * rasterizer.wHeight * 4];
-		std::vector<std::vector<float>> z_buffer((float)rasterizer.wWidth, std::vector<float>(rasterizer.wHeight, FLT_MAX));
+		sf::Uint8* pixelBuffer = new sf::Uint8[rasterizer.wWidth * rasterizer.wHeight * 4];
+		std::vector<std::vector<float>> zBuffer((float)rasterizer.wWidth, std::vector<float>(rasterizer.wHeight, FLT_MAX));
 
 		//Render pixels to screen
 		for (auto& row : tileManager.tiles)
 		{
 			for (auto& tile : row)
-				threadPool.run([&] {rasterizer.rasterTile(tile, z_buffer, buffer); });
+				threadPool.run([&] {rasterizer.rasterTile(tile, zBuffer, pixelBuffer); });
 		}
 		threadPool.wait();
 
@@ -168,16 +172,16 @@ int main()
 		window.clear();
 
 		//setup to display fps counter
-		cur_time = clock.getElapsedTime();
-		fps = 1.0f / (cur_time.asSeconds() - last_time.asSeconds());
+		curTime = clock.getElapsedTime();
+		fps = 1.0f / (curTime.asSeconds() - lastTime.asSeconds());
 		sf::Text frames(std::to_string((int)fps) + " N= " + std::to_string((int)numTrisBeingDrawn), font, 50);
 		frames.setFillColor(sf::Color::Cyan);
-		last_time = cur_time;
+		lastTime = curTime;
 
 
 		//using SFML to display pixels on screen
 		sf::Image image;
-		image.create(rasterizer.wWidth, rasterizer.wHeight, buffer);
+		image.create(rasterizer.wWidth, rasterizer.wHeight, pixelBuffer);
 
 		sf::Texture texture;
 		texture.loadFromImage(image);
@@ -188,7 +192,7 @@ int main()
 		window.draw(frames);
 		window.display();
 
-		delete[] buffer;
+		delete[] pixelBuffer;
 		for (auto& list : trisToDelete)
 			for (auto& ptr : list)
 				delete ptr;

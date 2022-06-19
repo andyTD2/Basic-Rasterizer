@@ -12,11 +12,11 @@ public:
 	vec4();
 	vec4(float newX, float newY, float newZ);
 	vec4(const vec4& other);
-	vec4 operator+(const vec4& other);
+	vec4 operator+(const vec4& other) const ;
 	vec4& operator+=(const vec4& other);
 	vec4 operator-(const vec4& other) const;
 	vec4& operator-=(const vec4& other);
-	vec4 operator*(float r);
+	vec4 operator*(float r) const;
 };
 
 class vec2
@@ -41,10 +41,6 @@ namespace func {
 	float dotPro(const vec4& l, const vec4& r);
 	sf::Vector3f vec3XScalar(const sf::Vector3f l, float r);
 	sf::Vector2f vec2XScalar(const sf::Vector2f l, float r);
-	void print(const vec2& i);
-	void print(const vec4& i);
-	float distance(const vec4& p1, const vec4& p2);
 	float dotpro2f(const vec2& l, const vec2& r);
-
 	float getDist(const vec4& planeNormal, const vec4& planePoint, const vec4& point);
 }

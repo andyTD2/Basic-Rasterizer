@@ -1,5 +1,5 @@
 #include "Scene.hpp"
-
+#include "stb_image.h"
 bool Scene::loadScene(const std::string& fileName)
 {
 	//in case we load in a new scene, make sure our sceneData is empty;
@@ -93,96 +93,6 @@ bool Scene::loadScene(const std::string& fileName)
 	return true;
 }
 
-sf::Uint8* Scene::loadTexture(const std::string& fileName, float& returnWidth, float& returnHeight)
-{
-	std::ifstream file(fileName, std::ios::binary);
-
-	if (file.fail())
-	{
-		std::cout << fileName << " could not be opened." << std::endl;
-		return nullptr;
-	}
-
-	unsigned char header[12];
-	unsigned short tWidth;
-	unsigned short tHeight;
-	unsigned char pixelSize;
-	unsigned char id;
-
-
-	file.read((char*)header, sizeof(unsigned char) * 12);
-	file.read((char*)&tWidth, sizeof(unsigned short));
-	file.read((char*)&tHeight, sizeof(unsigned short));
-	file.read((char*)&pixelSize, sizeof(unsigned char));
-	file.read((char*)&id, sizeof(unsigned char));
-
-
-	sf::Uint8* data = nullptr;
-	sf::Uint8* dataReversed = nullptr;
-
-	if ((int)pixelSize == 32)
-	{
-		int tSize = (int)tWidth * (int)tHeight;
-		data = new sf::Uint8[tSize * 4];
-		dataReversed = new sf::Uint8[tSize * 4];
-		file.read((char*)data, tSize * 4);
-
-		int k = 0;
-		int rowIncr = tWidth * 4;
-
-		int curRow = 0;
-		while (curRow < tSize * 4 - rowIncr)
-		{
-			for (int i = curRow; i < (curRow + rowIncr); i += 4)
-			{
-				dataReversed[k] = data[i + 2];
-				dataReversed[k + 1] = data[i + 1];
-				dataReversed[k + 2] = data[i];
-				dataReversed[k + 3] = data[i + 3];
-				k += 4;
-			}
-			curRow += rowIncr;
-		}
-
-	}
-
-	else if ((int)pixelSize == 24)
-	{
-		int tSize = (int)tWidth * (int)tHeight;
-		data = new sf::Uint8[tSize * 3];
-		dataReversed = new sf::Uint8[tSize * 4];
-		file.read((char*)data, tSize * 3);
-
-		int k = 0;
-
-		int rowIncr = tWidth * 3;
-
-		int curRow = 0;
-		while (curRow < tSize * 3 - rowIncr)
-		{
-			for (int i = curRow; i < (curRow + rowIncr); i += 3)
-			{
-				dataReversed[k] = data[i + 2];
-				dataReversed[k + 1] = data[i + 1];
-				dataReversed[k + 2] = data[i];
-				dataReversed[k + 3] = 255;
-				k += 4;
-			}
-			curRow += rowIncr;
-		}
-
-	}
-
-	delete[] data;
-	file.close();
-
-	returnWidth = tWidth;
-	returnHeight = tHeight;
-	return dataReversed;
-
-
-}
-
 void Scene::loadTexturesFromMtl(const std::string& mtlFile)
 {
 	std::ifstream file(mtlFile);
@@ -227,9 +137,10 @@ void Scene::loadTexturesFromMtl(const std::string& mtlFile)
 		else if (firstWord == "map_Kd" && mtlName != "")
 		{
 			iss >> textureFileName;
-
-			float w, h;
-			textureData.insert({ mtlName, loadTexture(textureFileName, w, h) });
+			int w, h, n;
+			
+			stbi_set_flip_vertically_on_load(1);
+			textureData.insert({ mtlName, stbi_load(textureFileName.c_str(), &w, &h, &n, 4) });
 			widthMap.insert({ mtlName, w });
 			heightMap.insert({ mtlName, h });
 			mtlName = "";

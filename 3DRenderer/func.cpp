@@ -41,10 +41,6 @@ float func::vecXmatrix(const vec4& vec, const float matrix[4][4], vec4& result, 
 		result.z /= result.w;
 	}
 	return result.w;
-
-
-
-
 }
 
 float func::edge_f(const vec2& pixel, const vec4& v0, const vec4& v1)
@@ -52,14 +48,14 @@ float func::edge_f(const vec2& pixel, const vec4& v0, const vec4& v1)
 	return (pixel.x - v0.x) * (v1.y - v0.y) - (pixel.y - v0.y) * (v1.x - v0.x);
 }
 
-void func::matrixXmatrix(const float left_mat[4][4], const float right_mat[4][4], float(&res)[4][4])
+void func::matrixXmatrix(const float leftMat[4][4], const float rightMat[4][4], float(&res)[4][4])
 {
 	for (uint8_t i = 0; i < 4; ++i) {
 		for (uint8_t j = 0; j < 4; ++j) {
-			res[i][j] = left_mat[i][0] * right_mat[0][j] +
-				left_mat[i][1] * right_mat[1][j] +
-				left_mat[i][2] * right_mat[2][j] +
-				left_mat[i][3] * right_mat[3][j];
+			res[i][j] = leftMat[i][0] * rightMat[0][j] +
+				leftMat[i][1] * rightMat[1][j] +
+				leftMat[i][2] * rightMat[2][j] +
+				leftMat[i][3] * rightMat[3][j];
 		}
 	}
 	return;
@@ -98,23 +94,6 @@ sf::Vector2f func::vec2XScalar(const sf::Vector2f l, float r)
 	return sf::Vector2f(l.x * r, l.y * r);
 }
 
-void func::print(const vec4& i)
-{
-
-	std::cout << std::setprecision(10) << i.x << ", " << i.y << ", " << i.z << std::endl;
-}
-void func::print(const vec2& i)
-{
-
-	std::cout << std::setprecision(10) << i.x << ", " << i.y << std::endl;
-}
-
-float func::distance(const vec4& p1, const vec4& p2)
-{
-	return sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2) + pow(p2.z - p1.z, 2) * 1.0);
-
-}
-
 vec4::vec4()
 {
 	x = 0;
@@ -136,9 +115,7 @@ vec4::vec4(const vec4& other)
 	this->z = other.z;
 	this->w = other.w;
 }
-
-
-vec4 vec4::operator+(const vec4& other)
+vec4 vec4::operator+(const vec4& other) const
 {
 	return vec4(x + other.x, y + other.y, z + other.z);
 }
@@ -162,7 +139,7 @@ vec4& vec4::operator-=(const vec4& other)
 
 	return *this;
 }
-vec4 vec4::operator*(float r)
+vec4 vec4::operator*(float r) const
 {
 	return vec4(x * r, y * r, z * r);
 }

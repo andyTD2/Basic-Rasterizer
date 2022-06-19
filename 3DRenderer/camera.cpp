@@ -27,11 +27,8 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 {
 	velocity = lookDir * panSpeed;
 
-	if (panForward)
-		camPos += velocity;
-	if (panBackwards)
-		camPos -= velocity;
-
+	if (panForward) camPos += velocity;
+	if (panBackwards) camPos -= velocity;
 	if (rotateLeft) curXRotation -= rotationSpeed;
 	if (rotateRight) curXRotation += rotationSpeed;
 	if (rotateUp) curYRotation -= rotationSpeed;
@@ -58,14 +55,14 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 	}
 
 
-	float y_mat[4][4] = {
+	float yMat[4][4] = {
 	{cos(curXRotation * 3.14159265359 / 180), 0.0, -sin(curXRotation * 3.14159265359 / 180), 0.0},
 	{0.0, 1.0, 0.0, 0.0 },
 	{sin(curXRotation * 3.14159265359 / 180), 0.0, cos(curXRotation * 3.14159265359 / 180), 0.0},
 	{0.0, 0.0, 0.0, 1.0}
 	};
 
-	float x_mat[4][4] = {
+	float xMat[4][4] = {
 	{1.0, 0.0, 0.0, 0.0},
 	{0.0, cos(curYRotation * 3.14159265359 / 180), sin(curYRotation * 3.14159265359 / 180), 0.0},
 	{0.0, -sin(curYRotation * 3.14159265359 / 180), cos(curYRotation * 3.14159265359 / 180), 0.0},
@@ -74,8 +71,8 @@ void Camera::updateCamera(bool rotateLeft, bool rotateRight, bool rotateUp, bool
 
 
 	vec4 target(0, 0, 1);
-	func::vecXmatrix(target, x_mat, lookDir, false);
-	func::vecXmatrix(lookDir, y_mat, lookDir, false);
+	func::vecXmatrix(target, xMat, lookDir, false);
+	func::vecXmatrix(lookDir, yMat, lookDir, false);
 	target = camPos + lookDir;
 
 	vec4 up(0, 1, 0);
@@ -245,6 +242,7 @@ int Camera::clipTriangleNear(Triangle& tri, std::vector<Triangle*>& outputTris, 
 		clippedTri->triangleTexture = tri.triangleTexture;
 		clippedTri->tWidth = tri.tWidth;
 		clippedTri->tHeight = tri.tHeight;
+
 		Triangle* clippedTri2 = new Triangle(tri.verts[0], tri.verts[1], tri.verts[2], newT1, safeTVertices[0], safeTVertices[1], tri.associatedMtl);
 		clippedTri2->transVerts[0] = one;
 		clippedTri2->transVerts[1] = safeVertices[0];
