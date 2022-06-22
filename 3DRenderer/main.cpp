@@ -1,5 +1,3 @@
-
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -31,6 +29,7 @@ int main()
 	Rasterizer rasterizer = Rasterizer(1024, 1024, cam.fov, cam.cNear, cam.cFar);
 	sf::RenderWindow window(sf::VideoMode(rasterizer.wWidth, rasterizer.wHeight), "3D Render");
 
+	//setup for fps calculation
 	sf::Clock clock = sf::Clock::Clock();
 	sf::Time lastTime = clock.getElapsedTime();
 	sf::Time curTime;
@@ -38,15 +37,20 @@ int main()
 	font.loadFromFile("arial.ttf");
 	float fps;
 
+
 	int numThreads = std::thread::hardware_concurrency() - 1;
 	if (numThreads <= 0)
 		numThreads = 1;
 	tbb::task_group threadPool;
 
+	//load our triangles and textures from file
 	Scene scene;
-	scene.loadScene("sponza.obj");
 
-	int numTiles = 8;
+	if (!scene.loadScene("obj/sponza.obj"))
+	{
+		"Failed to load scene.\n";
+		return -1;
+	}
 
 	sf::Event event;
 	while (window.isOpen())
@@ -92,7 +96,7 @@ int main()
 
 
 
-		//Update camera position(this sets a transformation matrix in cam.camMatrix)
+		//Update camera position
 		cam.updateCamera(cameraRotatingLeft, cameraRotatingRight, cameraRotatingUp, cameraRotatingDown,
 			cameraPanForward, cameraPanBackwards, cameraPanLeft, cameraPanRight);
 
@@ -100,12 +104,14 @@ int main()
 		Our camera handles conversion to view space based off camera movement. It also clips triangles
 		against the camera's near plane and culls triangles that are outside the camera's view frustum
 		*/
+		// We split our triangles into chunks proportional to amount of threads available
 		int increment = scene.sceneData.size() / numThreads;
 		for (int i = 0; i < numThreads; ++i)
 		{
 			int start = i * increment;
 			int end = (i >= numThreads - 1) ? scene.sceneData.size() : start + increment;
 
+			//threadPool.run takes a lamba statement and queues a task for one of our idle threads to run.
 			threadPool.run([&, start, end, i]
 				{
 					for (int j = start; j < end; ++j)
@@ -131,7 +137,7 @@ int main()
 				{
 					for (auto& tri : list)
 					{
-						rasterizer.project_triangle(*tri);
+						rasterizer.projectTriangle(*tri);
 						rasterizer.calculateBoundingBox(*tri);
 						rasterizer.calculateVertexData(*tri);
 					}
@@ -143,13 +149,13 @@ int main()
 		/*
 		Tile Manager initiatlizes each tile and stores all triangles that potentially overlap each tile.
 		*/
-		TileManager tileManager(numTiles, rasterizer.wWidth, rasterizer.wHeight);
+		TileManager tileManager(8, rasterizer.wWidth, rasterizer.wHeight);
 		for (auto& list : triangleLists)
 		{
 			tileManager.binTriangles(list);
 		}
 
-		//Our pixel buffer and depth buffers
+		//Our pixel buffer and depth buffers. Every 4 elements in pixelBuffer represents one RGBA pixel.
 		sf::Uint8* pixelBuffer = new sf::Uint8[rasterizer.wWidth * rasterizer.wHeight * 4];
 		std::vector<std::vector<float>> zBuffer((float)rasterizer.wWidth, std::vector<float>(rasterizer.wHeight, FLT_MAX));
 
@@ -171,7 +177,7 @@ int main()
 		//clear previous frame
 		window.clear();
 
-		//setup to display fps counter
+		//calculate FPS
 		curTime = clock.getElapsedTime();
 		fps = 1.0f / (curTime.asSeconds() - lastTime.asSeconds());
 		sf::Text frames(std::to_string((int)fps) + " N= " + std::to_string((int)numTrisBeingDrawn), font, 50);
@@ -188,10 +194,12 @@ int main()
 
 		sf::Sprite sprite(texture);
 
+		//display
 		window.draw(sprite);
 		window.draw(frames);
 		window.display();
 
+		//clear ONLY the triangles that were newly allocated by the clipping algorithm. We reuse all other triangles.
 		delete[] pixelBuffer;
 		for (auto& list : trisToDelete)
 			for (auto& ptr : list)

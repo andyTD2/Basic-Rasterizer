@@ -11,7 +11,10 @@ bool Scene::loadScene(const std::string& fileName)
 	std::ifstream file(fileName);
 
 	if (!file.is_open())
+	{
+		std::cout << "Failed to load file: " << fileName << "\n";
 		return false;
+	}
 
 	//we insert empty element into vector because the index for our vertices and textureCoords starts at 1
 	std::vector<vec4> vertices = { vec4(0, 0, 0) };
@@ -20,6 +23,7 @@ bool Scene::loadScene(const std::string& fileName)
 	std::string firstToken;
 	std::string curMaterial;
 
+	bool foundMtlFile = false;
 	while (!std::getline(file, line).eof())
 	{
 		std::istringstream iss(line);
@@ -30,7 +34,10 @@ bool Scene::loadScene(const std::string& fileName)
 			std::string mtlFile;
 			iss >> mtlFile;
 
-			loadTexturesFromMtl(mtlFile);
+			if (loadTexturesFromMtl("obj/" + mtlFile))
+				foundMtlFile = true;
+			else
+				return false;
 		}
 		else if (firstToken == "v")
 		{
@@ -90,16 +97,19 @@ bool Scene::loadScene(const std::string& fileName)
 		tri.tWidth = widthMap.find(tri.associatedMtl)->second;
 		tri.tHeight = heightMap.find(tri.associatedMtl)->second;
 	}
+
+	if (!foundMtlFile)
+		return false;
 	return true;
 }
 
-void Scene::loadTexturesFromMtl(const std::string& mtlFile)
+bool Scene::loadTexturesFromMtl(const std::string& mtlFile)
 {
 	std::ifstream file(mtlFile);
 	if (file.fail())
 	{
 		std::cout << mtlFile << " could not be opened." << std::endl;
-		return;
+		return false;
 	}
 
 	if (!textureData.empty())
@@ -139,8 +149,17 @@ void Scene::loadTexturesFromMtl(const std::string& mtlFile)
 			iss >> textureFileName;
 			int w, h, n;
 			
+			textureFileName = textureFileName.substr(textureFileName.find_last_of("/\\") + 1);
+			textureFileName = "obj/textures/" + textureFileName;
+
 			stbi_set_flip_vertically_on_load(1);
-			textureData.insert({ mtlName, stbi_load(textureFileName.c_str(), &w, &h, &n, 4) });
+			sf::Uint8* tData = stbi_load(textureFileName.c_str(), &w, &h, &n, 4);
+			if (tData == nullptr)
+			{
+				std::cout << "Error loading texture file: " << textureFileName << std::endl;
+				return false;
+			}
+			textureData.insert({ mtlName, tData});
 			widthMap.insert({ mtlName, w });
 			heightMap.insert({ mtlName, h });
 			mtlName = "";
@@ -153,5 +172,5 @@ void Scene::loadTexturesFromMtl(const std::string& mtlFile)
 		}
 	}
 	file.close();
-	return;
+	return true;
 }

@@ -9,9 +9,7 @@ struct Tile
 	int bBot;
 	int bRight;
 
-	float maxZ = FLT_MAX;
 	std::vector<Triangle*> trianglesToRender;
-
 };
 
 class TileManager
@@ -24,5 +22,13 @@ public:
 
 
 	TileManager(int numTiles, int windowWidth, int windowHeight);
-	void binTriangles(std::vector<Triangle*> triList);
+
+	/**
+	 * @brief For every tile, add all the triangles that overlap said tile to trianglesToRender
+	 *
+	 * @param triList: a list of triangles to bin
+	 *
+	 * @return void; results placed in each tile's trianglesToRender list
+	 */
+	void binTriangles(const std::vector<Triangle*> triList);
 };

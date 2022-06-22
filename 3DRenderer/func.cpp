@@ -1,25 +1,42 @@
 #include "func.hpp"
-#include <iomanip>
 
-vec4 func::getIntersection(vec4 plane_point, vec4 plane_normal, vec4 p0, vec4 p1, float& t)
+vec4 func::getIntersection(const vec4& planePoint, const vec4& planeNormal, const vec4& p0, const vec4& p1, float& t)
 {
-	plane_normal = func::norm(plane_normal);
-	float dist = -func::dotPro(plane_normal, plane_point);
-	float ad = func::dotPro(p0, plane_normal);
-	float bd = func::dotPro(p1, plane_normal);
+	float dist = -func::dotPro(planeNormal, planePoint);
+	float ad = func::dotPro(p0, planeNormal);
+	float bd = func::dotPro(p1, planeNormal);
 	t = (-dist - ad) / (bd - ad);
 	vec4 line = p1 - p0;
 	vec4 lineIntersect;
 	lineIntersect.x = line.x * t; lineIntersect.y = line.y * t; lineIntersect.z = line.z * t;
 	return (p0 + lineIntersect);
-
 }
 
-float func::vecXmatrix(const vec4& vec, const float matrix[4][4], vec4& result, bool project)
+void func::vecXmatrixAffine(const vec4& vec, const float matrix[4][4], vec4& result)
 {
+	//Note: this is implemented using AVX2 instructions
 	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y),
 		_mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
+	__m128 multiplyZs = _mm_mul_ps(_mm_set1_ps(vec.z), _mm_setr_ps(matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]));
 
+	__m256 snd = _mm256_castps128_ps256(multiplyZs);
+	snd = _mm256_insertf128_ps(snd, _mm_setr_ps(matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]), 1);
+	__m256 add = _mm256_add_ps(multiplyXandYs, snd);
+
+	__m128 sum = _mm_add_ps(_mm256_extractf128_ps(add, 0), _mm256_extractf128_ps(add, 1));
+	float* sumArray = (float*)&sum;
+
+	result.x = sumArray[0];
+	result.y = sumArray[1];
+	result.z = sumArray[2];
+	result.w = sumArray[3];
+}
+
+void func::vecXmatrixProjective(const vec4& vec, const float matrix[4][4], vec4& result)
+{
+	//Note: this is implemented using AVX2 instructions
+	__m256 multiplyXandYs = _mm256_mul_ps(_mm256_setr_ps(vec.x, vec.x, vec.x, vec.x, vec.y, vec.y, vec.y, vec.y),
+		_mm256_setr_ps(matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3], matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]));
 	__m128 multiplyZs = _mm_mul_ps(_mm_set1_ps(vec.z), _mm_setr_ps(matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]));
 
 	__m256 snd = _mm256_castps128_ps256(multiplyZs);
@@ -34,16 +51,16 @@ float func::vecXmatrix(const vec4& vec, const float matrix[4][4], vec4& result, 
 	result.z = sumArray[2];
 	result.w = sumArray[3];
 
-	if (result.w != 1 && project)
+	if (result.w != 1)
 	{
 		result.x /= result.w;
 		result.y /= result.w;
 		result.z /= result.w;
 	}
-	return result.w;
 }
 
-float func::edge_f(const vec2& pixel, const vec4& v0, const vec4& v1)
+
+float func::edgeFunc(const vec2& pixel, const vec4& v0, const vec4& v1)
 {
 	return (pixel.x - v0.x) * (v1.y - v0.y) - (pixel.y - v0.y) * (v1.x - v0.x);
 }
@@ -94,31 +111,26 @@ sf::Vector2f func::vec2XScalar(const sf::Vector2f l, float r)
 	return sf::Vector2f(l.x * r, l.y * r);
 }
 
-vec4::vec4()
+vec4::vec4() :
+	x(0), y(0), z(0), w(1)
 {
-	x = 0;
-	y = 0;
-	z = 0;
-	w = 1;
 }
-vec4::vec4(float newX, float newY, float newZ)
+
+vec4::vec4(float newX, float newY, float newZ) : 
+	x(newX), y(newY), z(newZ), w(1)
 {
-	x = newX;
-	y = newY;
-	z = newZ;
-	w = 1;
 }
-vec4::vec4(const vec4& other)
+
+vec4::vec4(const vec4& other) : 
+	x(other.x), y(other.y), z(other.z), w(other.w)
 {
-	this->x = other.x;
-	this->y = other.y;
-	this->z = other.z;
-	this->w = other.w;
 }
+
 vec4 vec4::operator+(const vec4& other) const
 {
 	return vec4(x + other.x, y + other.y, z + other.z);
 }
+
 vec4& vec4::operator+=(const vec4& other)
 {
 	this->x += other.x;
@@ -127,10 +139,12 @@ vec4& vec4::operator+=(const vec4& other)
 
 	return *this;
 }
+
 vec4 vec4::operator-(const vec4& other) const
 {
 	return vec4(x - other.x, y - other.y, z - other.z);
 }
+
 vec4& vec4::operator-=(const vec4& other)
 {
 	this->x -= other.x;
@@ -139,20 +153,19 @@ vec4& vec4::operator-=(const vec4& other)
 
 	return *this;
 }
+
 vec4 vec4::operator*(float r) const
 {
 	return vec4(x * r, y * r, z * r);
 }
 
-vec2::vec2()
+vec2::vec2() :
+	x(0), y(0)
 {
-	x = 0;
-	y = 0;
 }
-vec2::vec2(float newX, float newY)
+vec2::vec2(float newX, float newY) :
+	x(newX), y(newY)
 {
-	x = newX;
-	y = newY;
 }
 
 float func::getDist(const vec4& planeNormal, const vec4& planePoint, const vec4& point)

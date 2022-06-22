@@ -1,12 +1,10 @@
 #include "TileManager.hpp"
-#include <mutex>
 
 TileManager::TileManager(int numTiles, int windowWidth, int windowHeight)
 {
 	tileLengthHorizontal = windowWidth / numTiles;
 	tileLengthVertical = windowHeight / numTiles;
 	tiles = std::vector<std::vector<Tile>>(numTiles, std::vector<Tile>(numTiles));
-
 
 	for (int i = 0; i < numTiles; ++i)
 	{
@@ -23,8 +21,11 @@ TileManager::TileManager(int numTiles, int windowWidth, int windowHeight)
 
 }
 
-void TileManager::binTriangles(std::vector<Triangle*> triList)
+void TileManager::binTriangles(const std::vector<Triangle*> triList)
 {
+	//implemented using avx2
+	//If we know the locations of the four corners(bounding box), then we know all the tiles that lie inbetween. No need to
+	//check against every tile.
 	__m128 tileDimensions = _mm_set_ps(tileLengthHorizontal, tileLengthHorizontal, tileLengthVertical, tileLengthVertical);
 	for (auto& tri : triList)
 	{
