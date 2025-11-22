@@ -132,8 +132,9 @@ void Camera::setPanSpeed(float newSpeed)
 	panSpeed = newSpeed;
 }
 
-bool Camera::checkIfTriangleCulled(const Triangle& triangle) const
+bool Camera::checkIfTriangleFrustumCulled(const Triangle& triangle) const
 {
+	//Frustum culling
 	if (func::getDist(nearNormal, camPos, triangle.verts[0]) < 0 &&
 		func::getDist(nearNormal, camPos, triangle.verts[1]) < 0 &&
 		func::getDist(nearNormal, camPos, triangle.verts[2]) < 0)
@@ -153,6 +154,34 @@ bool Camera::checkIfTriangleCulled(const Triangle& triangle) const
 	if (func::getDist(botNormal, camPos, triangle.verts[0]) < 0 &&
 		func::getDist(botNormal, camPos, triangle.verts[1]) < 0 &&
 		func::getDist(botNormal, camPos, triangle.verts[2]) < 0)
+		return true;
+
+	////WORLD SPACE BACKFACE CULLING. Backface culling is preferably dont in view space instead.
+	//vec4 edge1 = triangle.verts[1] - triangle.verts[0];
+	//vec4 edge2 = triangle.verts[2] - triangle.verts[0];
+	//vec4 normal = func::crossProd(edge1, edge2);
+	//normal = func::norm(normal);
+
+	//vec4 viewDir = func::norm(camPos - triangle.verts[0]); // world-space view direction
+	//if (func::dotPro(normal, viewDir) <= 0) return true;
+
+
+	return false; // triangle passes both tests
+}
+
+bool Camera::checkIfTriangleBackfaceCulled(const Triangle& triangle) const
+{
+	// Backface culling in view space
+	vec4 edge1 = triangle.transVerts[1] - triangle.transVerts[0];
+	vec4 edge2 = triangle.transVerts[2] - triangle.transVerts[0];
+	vec4 normal = func::crossProd(edge1, edge2);
+	normal = func::norm(normal);
+
+	// Camera is at origin in view space, so vector from triangle to camera:
+	vec4 viewDir = func::norm(vec4(0, 0, 0) - triangle.transVerts[0]);
+
+	// Backface
+	if (func::dotPro(normal, viewDir) <= 0)
 		return true;
 
 	return false;

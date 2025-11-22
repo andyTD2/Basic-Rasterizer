@@ -55,6 +55,37 @@ struct Triangle
 	}
 };
 
+inline std::ostream& operator<<(std::ostream& os, const Triangle& tri)
+{
+	os << "Triangle (" << tri.associatedMtl << ")\n";
+	for (int i = 0; i < 3; ++i)
+	{
+		os << "  Vertex " << i << ": ("
+			<< tri.verts[i].x << ", "
+			<< tri.verts[i].y << ", "
+			<< tri.verts[i].z << ")\n";
+		os << "    Trans: ("
+			<< tri.transVerts[i].x << ", "
+			<< tri.transVerts[i].y << ", "
+			<< tri.transVerts[i].z << ")\n";
+		os << "    Proj: ("
+			<< tri.projVerts[i].x << ", "
+			<< tri.projVerts[i].y << ", "
+			<< tri.projVerts[i].z << ")\n";
+		os << "    Tex: ("
+			<< tri.tCoords[i].x << ", "
+			<< tri.tCoords[i].y << ")\n";
+	}
+	os << "  Bounding box: Left=" << tri.bLeft
+		<< ", Right=" << tri.bRight
+		<< ", Top=" << tri.bTop
+		<< ", Bottom=" << tri.bBot << "\n";
+	os << "  Area: " << tri.area << "\n";
+	os << "  Vertex depths: [" << tri.vertexDepth[0] << ", "
+		<< tri.vertexDepth[1] << ", " << tri.vertexDepth[2] << "]\n";
+	return os;
+}
+
 
 class Scene
 {
@@ -99,4 +130,15 @@ public:
 	 */
 	bool loadTexturesFromMtl(const std::string& mtlFile);
 
+
+	friend std::ostream& operator<<(std::ostream& os, const Scene& scene)
+	{
+		os << "Scene with " << scene.sceneData.size() << " triangles:\n";
+		for (size_t i = 0; i < scene.sceneData.size(); ++i)
+		{
+			os << "Triangle " << i << ":\n";
+			os << scene.sceneData[i] << "\n";
+		}
+		return os;
+	}
 };

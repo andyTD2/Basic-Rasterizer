@@ -1,4 +1,4 @@
-#define STB_IMAGE_IMPLEMENTATION
+﻿#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 #include <SFML/Graphics.hpp>
@@ -15,6 +15,7 @@
 #include "Rasterizer.hpp"
 #include "camera.hpp"
 #include "Scene.hpp"
+#include "func.hpp"
 
 int main()
 {
@@ -46,9 +47,9 @@ int main()
 	//load our triangles and textures from file
 	Scene scene;
 
-	if (!scene.loadScene("obj/sponza.obj"))
+	if (!scene.loadScene("obj/sponza2-triangulated.obj"))
 	{
-		"Failed to load scene.\n";
+		std::cout << "Failed to load scene.\n";
 		return -1;
 	}
 
@@ -106,6 +107,8 @@ int main()
 		*/
 		// We split our triangles into chunks proportional to amount of threads available
 		int increment = scene.sceneData.size() / numThreads;
+
+		//std::cout << scene << std::endl;
 		for (int i = 0; i < numThreads; ++i)
 		{
 			int start = i * increment;
@@ -116,10 +119,17 @@ int main()
 				{
 					for (int j = start; j < end; ++j)
 					{
-						if (!cam.checkIfTriangleCulled(scene.sceneData[j]))
+						//Checks if triangle is to be frustum culled. If so, discarded. After transforming into view space,
+						//checks if triangle is to be backface culled. If so, discarded.
+						if (!cam.checkIfTriangleFrustumCulled(scene.sceneData[j]))
 						{
 							cam.transformToViewSpace(scene.sceneData[j]);
-							cam.clipTriangleNear(scene.sceneData[j], triangleLists[i], trisToDelete[i]);
+							
+							if (!cam.checkIfTriangleBackfaceCulled(scene.sceneData[j]))
+							{
+								//Clip triangle if necessary. Otherwise, this func adds the triangle to triangleLists & trisToDelete to be processed further
+								cam.clipTriangleNear(scene.sceneData[j], triangleLists[i], trisToDelete[i]);
+							}
 						}
 					}
 				});
@@ -163,7 +173,12 @@ int main()
 		for (auto& row : tileManager.tiles)
 		{
 			for (auto& tile : row)
-				threadPool.run([&] {rasterizer.rasterTile(tile, zBuffer, pixelBuffer); });
+			{
+				//threadPool.run([&] {rasterizer.rasterTile(tile, zBuffer, pixelBuffer); });
+				threadPool.run([tile, &rasterizer, &zBuffer, &pixelBuffer] {
+					rasterizer.rasterTile(tile, zBuffer, pixelBuffer);
+					});
+			}
 		}
 		threadPool.wait();
 
@@ -180,7 +195,7 @@ int main()
 		//calculate FPS
 		curTime = clock.getElapsedTime();
 		fps = 1.0f / (curTime.asSeconds() - lastTime.asSeconds());
-		sf::Text frames(std::to_string((int)fps) + " N= " + std::to_string((int)numTrisBeingDrawn), font, 50);
+		sf::Text frames("fps: " + std::to_string((int)fps) + " triangles: " + std::to_string((int)numTrisBeingDrawn), font, 50);
 		frames.setFillColor(sf::Color::Cyan);
 		lastTime = curTime;
 

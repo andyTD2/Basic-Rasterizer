@@ -1,5 +1,7 @@
 #include "Scene.hpp"
 #include "stb_image.h"
+
+//#include <filesystem>
 bool Scene::loadScene(const std::string& fileName)
 {
 	//in case we load in a new scene, make sure our sceneData is empty;
@@ -12,6 +14,7 @@ bool Scene::loadScene(const std::string& fileName)
 
 	if (!file.is_open())
 	{
+		//std::cout << std::filesystem::absolute(fileName) << "\n";
 		std::cout << "Failed to load file: " << fileName << "\n";
 		return false;
 	}
@@ -28,7 +31,10 @@ bool Scene::loadScene(const std::string& fileName)
 	{
 		std::istringstream iss(line);
 
-		iss >> firstToken;
+		//read in first token of each line and skip empty/invalid lines
+		if (!(iss >> firstToken))
+			continue;
+
 		if (firstToken == "mtllib")
 		{
 			std::string mtlFile;
@@ -64,6 +70,7 @@ bool Scene::loadScene(const std::string& fileName)
 			int v0, v1, v2;
 			int t0, t1, t2;
 
+			//std::cout << line << std::endl;
 			iss >> v0;
 			if (iss.peek() == '/')
 			{
@@ -99,12 +106,16 @@ bool Scene::loadScene(const std::string& fileName)
 	}
 
 	if (!foundMtlFile)
+	{
+		std::cout << "Could not find MTL file" << std::endl;
 		return false;
+	}
+
 	return true;
 }
-
 bool Scene::loadTexturesFromMtl(const std::string& mtlFile)
 {
+	std::cout << "loading MTL file:" << mtlFile << std::endl;
 	std::ifstream file(mtlFile);
 	if (file.fail())
 	{
@@ -116,22 +127,29 @@ bool Scene::loadTexturesFromMtl(const std::string& mtlFile)
 		textureData.clear();
 
 	sf::Uint8* placeHolderTexture = new sf::Uint8[1000 * 1000 * 4];
-	for (int i = 0; i < 1000 * 1000 * 4; i += 4)
+	for (int y = 0; y < 1000; ++y)
 	{
-		placeHolderTexture[i] = 200;
-		placeHolderTexture[i + 1] = 90;
-		placeHolderTexture[i + 2] = 235;
-		placeHolderTexture[i + 3] = 255;
+		for (int x = 0; x < 1000; ++x)
+		{
+			int index = (y * 1000 + x) * 4;
+
+			// Example: diagonal gradient
+			placeHolderTexture[index] = static_cast<sf::Uint8>((x + y) / 2000.0f * 255); // R channel
+			placeHolderTexture[index + 1] = static_cast<sf::Uint8>((1000 - x + y) / 2000.0f * 255); // G channel
+			placeHolderTexture[index + 2] = static_cast<sf::Uint8>(255 - ((x + y) / 2000.0f * 255)); // B channel
+			placeHolderTexture[index + 3] = 255; // Alpha
+		}
 	}
 
 	std::string line;
 	std::string firstWord;
 	std::string mtlName = "";
 	std::string textureFileName;
+
 	while (!std::getline(file, line).eof())
 	{
 		std::istringstream iss(line);
-		iss >> firstWord;
+		if (!(iss >> firstWord)) continue; // skip empty lines
 
 		if (firstWord == "newmtl" && mtlName == "")
 		{
@@ -139,38 +157,58 @@ bool Scene::loadTexturesFromMtl(const std::string& mtlFile)
 		}
 		else if (firstWord == "newmtl" && mtlName != "")
 		{
-			textureData.insert({ mtlName, placeHolderTexture });
-			widthMap.insert({ mtlName, 1000 });
-			heightMap.insert({ mtlName, 1000 });
+			// Assign placeholder to previous material if it has no texture
+			if (textureData.find(mtlName) == textureData.end())
+			{
+				textureData[mtlName] = placeHolderTexture;
+				widthMap[mtlName] = 1000;
+				heightMap[mtlName] = 1000;
+			}
+
 			iss >> mtlName;
 		}
 		else if (firstWord == "map_Kd" && mtlName != "")
 		{
 			iss >> textureFileName;
 			int w, h, n;
-			
+
 			textureFileName = textureFileName.substr(textureFileName.find_last_of("/\\") + 1);
-			textureFileName = "obj/textures/" + textureFileName;
+			textureFileName = "obj/textures2/" + textureFileName;
+			std::cout << "Loading texture file: " << textureFileName << std::endl;
 
 			stbi_set_flip_vertically_on_load(1);
 			sf::Uint8* tData = stbi_load(textureFileName.c_str(), &w, &h, &n, 4);
 			if (tData == nullptr)
 			{
-				std::cout << "Error loading texture file: " << textureFileName << std::endl;
-				return false;
+				std::cout << "Warning: could not load texture file: " << textureFileName
+					<< ". Using placeholder." << std::endl;
+				tData = placeHolderTexture;
+				w = h = 1000;
 			}
-			textureData.insert({ mtlName, tData});
-			widthMap.insert({ mtlName, w });
-			heightMap.insert({ mtlName, h });
-			mtlName = "";
+			textureData[mtlName] = tData;
+			widthMap[mtlName] = w;
+			heightMap[mtlName] = h;
+
+			// Optional: reset mtlName if you only expect one map per material
+			// mtlName = "";
 		}
 		else if (firstWord == "map_Kd" && mtlName == "")
 		{
 			std::string bad;
 			iss >> bad;
-			std::cout << "Error, texture file: " << bad << " not associated with any object name.\n";
+			std::cout << "Warning: texture file: " << bad
+				<< " not associated with any object name." << std::endl;
 		}
 	}
+
+	// Handle the last material if it has no texture
+	if (!mtlName.empty() && textureData.find(mtlName) == textureData.end())
+	{
+		textureData[mtlName] = placeHolderTexture;
+		widthMap[mtlName] = 1000;
+		heightMap[mtlName] = 1000;
+	}
+
 	file.close();
 	return true;
 }

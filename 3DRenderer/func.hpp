@@ -9,12 +9,15 @@ public:
 
 	vec4();
 	vec4(float newX, float newY, float newZ);
+	vec4(float newX, float newY, float newZ, float newW);
 	vec4(const vec4& other);
 	vec4 operator+(const vec4& other) const ;
 	vec4& operator+=(const vec4& other);
 	vec4 operator-(const vec4& other) const;
 	vec4& operator-=(const vec4& other);
 	vec4 operator*(float r) const;
+
+	std::string toString() const;
 };
 
 class vec2

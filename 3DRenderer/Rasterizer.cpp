@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Rasterizer.hpp"
 
 Rasterizer::Rasterizer(int newWindowWidth, int newWindowHeight, int fov, float cNear, float cFar) :
@@ -59,10 +59,13 @@ void Rasterizer::calculateVertexData(Triangle& tri) const
 
 void Rasterizer::rasterTile(const Tile& tile, std::vector<std::vector<float>>& zBuffer, sf::Uint8*& pixelBuffer) const
 {
+	int count = 0;
 	//Using AVX2 instructions
 	__m256 factor = _mm256_set_ps(7, 6, 5, 4, 3, 2, 1, 0);
 	for (auto& triangle : tile.trianglesToRender)
 	{
+
+
 		//We clamp the dimensions of the triangle's bounding box to the dimensions of the tile. 
 		//This ensures we don't check pixels outside the tile.
 		int bLeft = std::max(tile.bLeft, std::min(triangle->bLeft, tile.bRight));
@@ -172,4 +175,5 @@ void Rasterizer::rasterTile(const Tile& tile, std::vector<std::vector<float>>& z
 			w2r += b2;
 		}
 	}
+
 }

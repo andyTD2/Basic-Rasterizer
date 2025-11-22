@@ -32,7 +32,17 @@ public:
 	 *
 	 * @return True if triangle is outside viewing frustum, else false
 	 */
-	bool checkIfTriangleCulled(const Triangle& triangle) const;
+	bool checkIfTriangleFrustumCulled(const Triangle& triangle) const;
+
+	/**
+	 * @brief  Checks if a triangle should be culled it is back facing. If it is, return true. This culling occurs in view space, so 
+	 * call this function only if transVert(view space vertices) are present.
+	 *
+	 * @param  triangle: triangle to be checked
+	 *
+	 * @return True if triangle is back facing and should be culled, else false
+	 */
+	bool checkIfTriangleBackfaceCulled(const Triangle& triangle) const;
 
 	/**
 	 * @brief  Clips triangles that are partially inside the near plane
@@ -61,21 +71,21 @@ public:
 	float cNear, cFar;
 	float fov;
 
+	float camMatrix[4][4];
+	vec4 camPos;
+	vec4 curForward;
+
 private:
 	float curXRotation;
 	float curYRotation;
 	float rotationSpeed;
 	float panSpeed;
 
-	//tranform matrix
-	float camMatrix[4][4];
 
-	vec4 camPos;
 	vec4 lookDir;
 	vec4 velocity;
 	vec4 curRight;
 	vec4 curUp;
-	vec4 curForward;
 
 	//the planes that define our frustum
 	vec4 rightNormal;

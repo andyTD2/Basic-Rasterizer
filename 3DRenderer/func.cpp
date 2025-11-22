@@ -116,10 +116,16 @@ vec4::vec4() :
 {
 }
 
+
 vec4::vec4(float newX, float newY, float newZ) : 
 	x(newX), y(newY), z(newZ), w(1)
 {
 }
+vec4::vec4(float newX, float newY, float newZ, float newW) :
+	x(newX), y(newY), z(newZ), w(newW)
+{
+}
+
 
 vec4::vec4(const vec4& other) : 
 	x(other.x), y(other.y), z(other.z), w(other.w)
@@ -157,6 +163,15 @@ vec4& vec4::operator-=(const vec4& other)
 vec4 vec4::operator*(float r) const
 {
 	return vec4(x * r, y * r, z * r);
+}
+
+std::string vec4::toString() const
+{
+	return "(" +
+		std::to_string(x) + ", " +
+		std::to_string(y) + ", " +
+		std::to_string(z) + ", " +
+		std::to_string(w) + ")";
 }
 
 vec2::vec2() :
